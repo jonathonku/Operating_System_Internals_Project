@@ -1,0 +1,42 @@
+Address	Content	Comment
+0	2	EvenSum long 2; variable EvenSum set to 2, address starts at default 0
+1	49	Count long 49; variable Count set to 49
+2	550	Temp long 550; variable Temp set to 550
+3	0	Final long 0; variable Final set to 0
+4	51150	Start Move R1,EvenSum; set R1 to EvenSum
+5	0	Address of EvenSum
+6	51260	Move R2,2; set R2 to 2
+7	2	Immediate operand value of 2
+8	51360	Move R3,100; set R3 to 100
+9	100	Immediate operand value of 100
+10	51460	Move R4,5, set R4 to 5
+11	5	Immediate operand value of 5
+12	11260	Loop Add R2,2; R2=R2+2
+13	2	Immediate value of 2
+14	11112	Add R1,R2; R1=R1+R2
+15	25060	Subtract Count,1; Count=Count-1
+16	1	Address of Count
+17	1	Immediate operand value of 1
+18	85000	BrOnPlus Count,Loop; if Count > 0, jump to Loop
+19	1	Address of Count
+20	12	Address of Loop
+21	55011	Move EvenSum,R1; Set EvenSum to R1
+22	0	Address of EvenSum
+23	25011	Subtract Temp,R1; Temp=Temp-R1
+24	2	Address of Temp
+25	45013	Divide Temp,R3; Temp=Temp/R3
+26	2	Address of Temp
+27	35014	Divide Temp,R4; Temp=Temp*R4
+28	2	Address of Temp
+29	75000	BrOnMinus Temp,One; if Temp
+30	2	Address of Temp
+31	36	Address of One
+32	55060	Move Final,2; Set Final to 2
+33	3	Address of Final
+34	2	Immediate value
+35	0	Halt
+36	55060	Move Final,1; Set Final to 1
+37	3	Address of Final
+38	1	Immediate value
+39	0	Halt
+-1	4	End of progam, PC = 4

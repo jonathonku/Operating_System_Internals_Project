@@ -1,0 +1,23 @@
+Label	Mnemonic	Operands	Description
+main	Function			Start of main function
+EvenSum	Long		2		Declare variable EvenSum and initialize it to 2
+Count	Long		49		Declare variable Addend and initialize it to 49
+Temp	Long		550		Declare variable Temp and initialize it to 550
+Final	Long		0		Declare variable Final and initialize it to 0
+Start	Move		R1,EvenSum	Initialize R1 to EvenSum
+	Move		R2,2		Initialize R2 to 2
+	Move		R3,100		Initialize R3 to 100
+	Move		R4,5		Initialize R4 to 5
+Loop	Add		R2,2		R2 = R2 + 2
+	Add		R1,R2		R1 = R1 + R2
+	Subtract	Count,1 	Count = Count - 1
+	BrOnPlus	Count,Loop	If Count > 0, jump to Loop
+	Move		EvenSum,R1	EvenSum = R1
+	Subtract	Temp,R1		Temp = Temp - R1
+	Divide		Temp,R3		Temp = Temp/R3
+	Multiply	Temp,R4		Temp = Temp*5
+	BrOnMinus	Temp,Two	If Temp < 0, jump to One
+	Move		Final,2
+	Halt
+One	Move		Final,1
+	Halt
