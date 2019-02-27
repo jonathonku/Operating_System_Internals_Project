@@ -1,5 +1,5 @@
 /*
- * Author Name:	Jonathon Ku
+ * Author Name:	Jonathon Ku and Gabe and India
  * Student ID:	300994041
  * Class:		CSCI465
  * Assignment:	Homework 1
