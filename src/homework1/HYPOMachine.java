@@ -21,6 +21,13 @@
  * 				be specified by the programmer. 
  */
 package homework1;
+/*
+ * Change Log:
+ * 
+ * 3/2/2019- JKU: I updated InitializeSystem() with PID, UserFreeList and OSFreeList. 
+ * Also added EOL and TIMESLICE to global variables. Also wrote AllocateOSMemory method
+ *
+ */
 //import java.util.LinkedList;
 import java.util.Scanner;
 import java.io.*;
@@ -30,6 +37,8 @@ public class HYPOMachine
 	//Global Variables
 	final private static long[] MAINMEMORY = new long[10000];	//Array of memory addresses
 	final private static long[] GPRS = new long [8];			//Array of temporary registers for quick memory access
+	final private static long EOL = -1;							//EndOfList indicator
+	final private static long TIMESLICE = 200;					//For Priority Round Robin Algorithm. Amount of clock ticks before CPU is given to another process.
 	private static long CLOCK;									//Keeps track of how long it has taken for execution
 	private static long MAR;									//Contains the current address of instruction in main memory
 	private static long MBR;									//Contains the content of current address
@@ -37,6 +46,10 @@ public class HYPOMachine
 	private static long PSR;									//Contains a value based on the state of a process. 0 if no errors incurred. List of error codes below.
 	private static long PC;										//Contains the memory address of the instruction being executed
 	private static long SP;										//Points to the current address of the stack in memory
+	private static long RQ = EOL;								//Pointer to the head of the Ready Queue
+	private static long UserFreeList = EOL;						//Pointer to the head of User Free Memory List
+	private static long OSFreeList = EOL;						//Pointer to the head of OS Free Memory List
+	private static long PID;									//Keeps track of next Process ID is available.
 	
 	/*****************************************************************************
 	 * Error Codes
@@ -66,6 +79,8 @@ public class HYPOMachine
 	final static private long DivisionByZeroError = -10;			
 	final static private long StackOverFlowError = -11;	
 	final static private long StackUnderFlowError = -12;
+	final static private long NoFreeMemory = -13;
+	final static private long InvalidMemorySize = -14;
 	
 	/*****************************************************************************
 	 * Function: InitializeSystem
@@ -85,7 +100,8 @@ public class HYPOMachine
 	 * Author: Jonathon Ku
 	 * Change Log:
 	 * 		2/8/2019: Created loop to initialize MAINMEMORY and GPRS global arrays.
-	 * 		Additionally, initialize all other global variables to 0
+	 * 		Additionally, initialize all other global variables to 0.
+	 * 		3/2/2019: Added instantiation for PID, OSFreeList, and UserFreeList
 	 *****************************************************************************/	
 	private static void InitializeSystem() 
 	{
@@ -104,6 +120,18 @@ public class HYPOMachine
 		PSR = 0;
 		PC = 0;
 		SP = 0;
+		PID = 0;
+
+		//Create UserFreeList
+		UserFreeList = 3000;
+		MAINMEMORY[(int) UserFreeList] = -1;
+		MAINMEMORY[(int) UserFreeList + 1] = 4000;
+		//Create OSFreeList
+		OSFreeList = 7000;
+		MAINMEMORY[(int) OSFreeList] = -1;
+		MAINMEMORY[(int) OSFreeList + 1] = 3000; 
+		
+		//Still need to call create process passing NullProcessExecutableFile and priority zero as arguments (From PsuedoCode)
 	}
 	
 	/*****************************************************************************
@@ -1072,8 +1100,122 @@ public class HYPOMachine
 				return new Operand(InvalidOpModeError, -2, -2);
 		}
 	}
+
+	/*****************************************************************************
+	 * Function: AllocateOSMemory
+	 * 
+	 * Task Description:
+	 * 		Takes a parameter long requestedSize and attempts to allocate a chunk of 
+	 * 		memory from OSFreeList of the appropriate size. It will return a long
+	 * 		containing the address in memory of the allocated memory. This address will
+	 * 		be used to initialize a PCB.
+	 * 
+	 * Input Parameters:
+	 * 		requestedSize			Size of block we're requesting for PCB
+	 * 
+	 * Output Parameters:
+	 * 		None
+	 * 
+	 * Function Return Value
+	 * 			>0: 	Address of allocated block of OS memory
+	 * 			-13:	NoFreeMemory				No free memory to allocate from list
+	 * 			-14:	InvalidMemorySize			Invalid Memory Size. Size must be greater than 0.
+	 * 	
+	 * Author: Jonathon Ku
+	 * Change Log:
+	 * 		3/2/2019: Wrote AllocateOSMemory. Takes a size, searches FreeOSMemList for
+	 * 		free block of greater than or equal size. Takes the free block out of the
+	 * 		list and returns the address of the allocated memory block to client code.
+	 * 		Not yet test.
+	 ****************************************************************************/
+	private static long AllocateOSMemory(long requestedSize) 
+	{
+		/*
+		 * OSFreeList is the pointer to the head of the list of Free OS memory. If
+		 * it is equal to EOL, there is no more free space.
+		 */
+		if(OSFreeList == EOL) 
+		{
+			System.out.println("No free OS memory");
+			return NoFreeMemory;
+		}
+		/*
+		 * requestedSize must be greater than 0 to be valid. Additionally,
+		 * requestedSize must be atleast 2 to contain address of next PCB and size.
+		 */
+		if(requestedSize < 0) 
+		{
+			System.out.println("Invalid Memory Size");
+			return InvalidMemorySize;
+		}
+		if(requestedSize == 1)
+		{
+			requestedSize = 2;
+		}
+		/*
+		 * Create pointers so that we can traverse the list of Free OS Memory. Loop
+		 * through the list until we find a block of greater or equal size to
+		 * requestedSize. If it is not found on curPtr, set prevPtr to curPtr and
+		 * curPtr to next free block by setting it to the value contained in curPtr.
+		 */
+		long curPtr = OSFreeList;
+		long prevPtr =  EOL;
+		while(curPtr != EOL) {
+			//Found a block of requestedSize
+			if(MAINMEMORY[(int) curPtr + 1] == requestedSize)
+			{
+				
+				if(curPtr == OSFreeList) //Found in first block
+				{
+					OSFreeList = MAINMEMORY[(int)curPtr]; //set first block of OSFreeList to the next block
+					MAINMEMORY[(int)curPtr] = EOL; //reset pointer to next block to EOL so it is completely removed from the list
+					return curPtr; //return memory address of allocated OS block
+				}
+				else //Found but not in first block
+				{
+					MAINMEMORY[(int)prevPtr] = MAINMEMORY[(int)curPtr]; //set next block of prev block to current block's next block.
+					MAINMEMORY[(int)curPtr] = EOL; //reset pointer to next block to EOL so it is completely removed from the list
+					return curPtr; //return memory address of allocated OS block
+				}
+			}
+			//Found block with size greater than requestedSize
+			else if(MAINMEMORY[(int) curPtr + 1] > requestedSize)
+			{
+				if(curPtr == OSFreeList) //Found in first block
+				{
+					MAINMEMORY[(int) (curPtr + requestedSize)] = MAINMEMORY[(int) curPtr]; //Move address of next block to new block.
+					MAINMEMORY[(int) (curPtr + requestedSize + 1)] = MAINMEMORY[(int) curPtr + 1] - requestedSize; //Calculate size of new block and use it to set new block size index
+					OSFreeList = curPtr + requestedSize; //Point OSFreeList to new smaller block.
+					MAINMEMORY[(int) curPtr] = EOL; //reset pointer to next block to EOL so it is completely removed from the list
+					return curPtr; //return memory address of allocated OS block
+				}
+				else //Found but not in first block
+				{
+					MAINMEMORY[(int) (curPtr + requestedSize)] = MAINMEMORY[(int) curPtr]; //Move address of next block to new block.
+					MAINMEMORY[(int) (curPtr + requestedSize + 1)] = MAINMEMORY[(int) curPtr + 1] - requestedSize; //Calculate size of new block and use it to set new block size index
+					MAINMEMORY[(int) prevPtr] = curPtr + requestedSize; //Point prev block's next block to new smaller block.
+					MAINMEMORY[(int) curPtr] = EOL; //reset pointer to next block to EOL so it is completely removed from the list
+					return curPtr; //return memory address of allocated OS block
+				}
+			}
+			else //Current block is smaller than requestedSize
+			{
+				//Iterate to next block
+				prevPtr = curPtr;
+				curPtr = MAINMEMORY[(int) curPtr];
+			}
+		}
+		/*
+		 * We have not found a block that is larger than, or equal to requestedSize
+		 * and we have iterated through the whole list. Therefore, this is no free
+		 * OS memory
+		 */
+		System.out.println("No free OS memory");
+		return NoFreeMemory;
+	}
 	
 	/*****************************************************************************
+
 	 * Function: Main
 	 * 
 	 * Task Description:
@@ -1135,6 +1277,8 @@ public class HYPOMachine
 		return;
 	}
 }
+
+
 
 /* Used for Assembler function (which does not exist).
 class Symbol
