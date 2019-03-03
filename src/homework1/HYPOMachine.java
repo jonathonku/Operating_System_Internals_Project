@@ -27,6 +27,10 @@ package homework1;
  * 3/2/2019- JKU: I updated InitializeSystem() with PID, UserFreeList and OSFreeList. 
  * Also added EOL and TIMESLICE to global variables. Also wrote AllocateOSMemory method
  *
+ * 3/3/2019- JKU: Wrote FreeOSMemory method. Added constant variables for the minimum
+ * and maximum addresses of each section of memory: User Program, User Dynamic, OS
+ * Dynamic. Added error code for Success! Additional constant variables for the future
+ * will include PCB indices for Priority, Size, NextPCB, etc.
  */
 //import java.util.LinkedList;
 import java.util.Scanner;
@@ -39,6 +43,13 @@ public class HYPOMachine
 	final private static long[] GPRS = new long [8];			//Array of temporary registers for quick memory access
 	final private static long EOL = -1;							//EndOfList indicator
 	final private static long TIMESLICE = 200;					//For Priority Round Robin Algorithm. Amount of clock ticks before CPU is given to another process.
+	final private static long MINPROGRAMADDRESS = 0;			//Minimum address for User Program block of memory
+	final private static long MAXPROGRAMADDRESS = 2999;			//Maximum address for User Program block of memory
+	final private static long MINUSERMEMADDRESS = 3000;			//Minimum address for User Memory block of memory			
+	final private static long MAXUSERMEMADDRESS = 6999;			//Maximum address for User Memory block of memory
+	final private static long MINOSMEMADDRESS = 7000;			//Minimum address for OS Memory block of memory
+	final private static long MAXOSMEMADDRESS = 9999;			//Maximum address for OS Memory block of memory
+	
 	private static long CLOCK;									//Keeps track of how long it has taken for execution
 	private static long MAR;									//Contains the current address of instruction in main memory
 	private static long MBR;									//Contains the content of current address
@@ -53,9 +64,10 @@ public class HYPOMachine
 	
 	/*****************************************************************************
 	 * Error Codes
+	 * 		 0:		Success							No error. Operation was successful.
 	 * 		-1:		FileOpenError					Unable to open the file
-	 * 		-2:		AddressInvalidError				Invalid address error. Value must be between 0 and 9999
-	 * 		-3:		InvalidPCValueError				Invalid PC value. Value must be between 0 and 9999
+	 * 		-2:		AddressInvalidError				Invalid address error. Address must be within respective block: User Programs 0-2999, User Memory 3000-6999, OS Memory 7000-9999 
+	 * 		-3:		InvalidPCValueError				Invalid PC value. Value must be between 0-2999
 	 * 		-4: 	NoEndOfProgramError				Missing end of program indicator
 	 * 		-5:		InvalidInstructionError			Invalid instruction error. Value must be between 0 and 126767
 	 * 		-6: 	InvalidOpcodeError				Invalid OpCode. OpCode must be between 0-12
@@ -64,9 +76,13 @@ public class HYPOMachine
 	 * 		-9: 	DestinatinoOperandError			Invalid destination operand.
 	 * 		-10:	DivisionByZeroError				Cannot divide by zero.
 	 * 		-11:	StackOverFlowError				Stack is full. Max address 9999.
-	 * 		-12:	StackUnderFlowError				Stack is empty. Bottom of stack is 9900
-	 * 
+	 * 		-12:	StackUnderFlowError				Stack is empty. Bottom of stack is 9900.
+	 * 		-13:	NoFreeMemory					No free memory to allocate from list.
+	 * 		-14:	InvalidMemorySize				Invalid Memory Size. Size must be greater than 0.
+	 * 		
+	 * 	
 	 *****************************************************************************/
+	final static private long Success = 0;
 	final static private long FileOpenError = -1;
 	final static private long AddressInvalidError = -2;
 	final static private long InvalidPCValueError = -3;
@@ -122,16 +138,28 @@ public class HYPOMachine
 		SP = 0;
 		PID = 0;
 
-		//Create UserFreeList
-		UserFreeList = 3000;
-		MAINMEMORY[(int) UserFreeList] = -1;
-		MAINMEMORY[(int) UserFreeList + 1] = 4000;
-		//Create OSFreeList
-		OSFreeList = 7000;
-		MAINMEMORY[(int) OSFreeList] = -1;
-		MAINMEMORY[(int) OSFreeList + 1] = 3000; 
+		/*
+		 * Create UserFreeList: Point UserFreeList to the address of the beginning of
+		 * the User Memory section of main memory. Store in a constant variable, 
+		 * MINUSERMEMADDRESS. Store size of block in next index, calculated by max
+		 * address + min address + 1.
+		 */
+		
+		UserFreeList = MINUSERMEMADDRESS;
+		MAINMEMORY[(int) UserFreeList] = EOL;
+		MAINMEMORY[(int) UserFreeList + 1] = MAXUSERMEMADDRESS - MINUSERMEMADDRESS + 1;
+		/*
+		 * Create OSFreeList: Point OSFreeList to the address of the beginning of
+		 * the OS Memory section of main memory. Store in a constant variable, 
+		 * MINOSMEMADDRESS. Store size of block in next index, calculated by max
+		 * address + min address + 1.
+		 */
+		OSFreeList = MINOSMEMADDRESS;
+		MAINMEMORY[(int) OSFreeList] = EOL;
+		MAINMEMORY[(int) OSFreeList + 1] = MAXOSMEMADDRESS - MINOSMEMADDRESS + 1; 
 		
 		//Still need to call create process passing NullProcessExecutableFile and priority zero as arguments (From PsuedoCode)
+		//This is a machine language code which is just a constant loop while there are no other processes to execute.
 	}
 	
 	/*****************************************************************************
@@ -267,7 +295,7 @@ public class HYPOMachine
 	 * 
 	 * Function Return Value will be one of the following:
 	 *		-1:	FileOpenError			Unable to open the file
-	 *		-2:	AddressInvalidError		Invalid address error. Value must be between 0 and 9999
+	 *		-2:	AddressInvalidError		Invalid address error. Address must be within respective block: User Programs 0-2999, User Memory 3000-6999, OS Memory 7000-9999
 	 *		-3:	InvalidPCValueError		Invalid PC value. Value must be between 0 and 9999
 	 *		-4: NoEndOfProgramError		Missing end of program indicator
 	 * 		0 - Valid Address Range		Successful Load, valid PC value
@@ -357,7 +385,7 @@ public class HYPOMachine
 				 */
 				else
 				{
-					System.out.println("Invalid address error. Value must be between 0 and 9999");
+					System.out.println("Invalid address error. Address must be within respective block: User Programs 0-2999, User Memory 3000-6999, OS Memory 7000-9999");
 					fileReader.close();
 					return AddressInvalidError;
 				}
@@ -472,7 +500,7 @@ public class HYPOMachine
 	 * 		None
 	 * 
 	 * Function Return Value 
-	 * 		-2:		AddressInvalidError				Invalid address error. Value must be between 0 and 9999
+	 * 		-2:		AddressInvalidError				Invalid address error. Address must be within respective block: User Programs 0-2999, User Memory 3000-6999, OS Memory 7000-9999
 	 * 		-3:		InvalidPCValueError				Invalid PC value. Value must be between 0 and 9999
 	 * 		-5:		InvalidInstructionError			Invalid instruction error. Value must be between 0 and 126767
 	 * 		-6: 	InvalidOpcodeError				Invalid OpCode. OpCode must be between 0-12
@@ -525,7 +553,7 @@ public class HYPOMachine
 			}
 			else
 			{
-				System.out.println("Invalid address error. Value must be between 0 and 9999");
+				System.out.println("Invalid address error. Address must be within respective block: User Programs 0-2999, User Memory 3000-6999, OS Memory 7000-9999");
 				status =  AddressInvalidError;
 			}
 			
@@ -1001,7 +1029,7 @@ public class HYPOMachine
 	 * 		Operand.getStatus()						Operand object containing status of fetch
 	 * 		Possible values of Operand.getStatus():
 	 * 			 0.	Successful Fetch
-	 * 			-2:	AddressInvalidError				Invalid address error. Value must be between 0 and 9999
+	 * 			-2:	AddressInvalidError				Invalid address error. Address must be within respective block: User Programs 0-2999, User Memory 3000-6999, OS Memory 7000-9999
 	 * 			-3:	InvalidPCValueError				Invalid PC value. Value must be between 0 and 9999
 	 * 			-7: InvalidOpModeError				Invalid OpMode. OpMode must be between 0-6
 	 * 
@@ -1028,7 +1056,7 @@ public class HYPOMachine
 				}
 				else
 				{
-					System.out.println("Invalid address error. Value must be between 0 and 9999");
+					System.out.println("Invalid address error. Address must be within respective block: User Programs 0-2999, User Memory 3000-6999, OS Memory 7000-9999");
 					return new Operand(AddressInvalidError, -1, -1);
 				}
 			case 3:	//Autoincrement mode: operand address is in GPR and operand value is in memory
@@ -1044,7 +1072,7 @@ public class HYPOMachine
 				 */
 				else
 				{
-					System.out.println("Invalid address error. Value must be between 0 and 9999");
+					System.out.println("Invalid address error. Address must be within respective block: User Programs 0-2999, User Memory 3000-6999, OS Memory 7000-9999");
 					return new Operand(AddressInvalidError, -1, -1);
 				}
 			case 4:	//Autodecrement mode: operand address is in GPR and operand value is in memory 
@@ -1060,7 +1088,7 @@ public class HYPOMachine
 				 */
 				else
 				{
-					System.out.println("Invalid address error. Value must be between 0 and 9999");
+					System.out.println("Invalid address error. Address must be within respective block: User Programs 0-2999, User Memory 3000-6999, OS Memory 7000-9999");
 					return new Operand(AddressInvalidError, -1, -1);
 				}
 			case 5:	//Direct mode: operand address is pointed at by PC and operand value is in main memory at that address
@@ -1075,7 +1103,7 @@ public class HYPOMachine
 				 */
 				else
 				{
-					System.out.println("Invalid address error. Value must be between 0 and 9999");
+					System.out.println("Invalid address error. Address must be within respective block: User Programs 0-2999, User Memory 3000-6999, OS Memory 7000-9999");
 					return new Operand(AddressInvalidError, -1, -1);
 				}
 			case 6:	//Intermediate mode: operand is being pointed at by PC. No operand address.
@@ -1136,16 +1164,16 @@ public class HYPOMachine
 		 */
 		if(OSFreeList == EOL) 
 		{
-			System.out.println("No free OS memory");
+			System.out.println("No free memory to allocate from list.");
 			return NoFreeMemory;
 		}
 		/*
 		 * requestedSize must be greater than 0 to be valid. Additionally,
-		 * requestedSize must be atleast 2 to contain address of next PCB and size.
+		 * requestedSize must be atleast 2 to contain address of next block and size.
 		 */
-		if(requestedSize < 0) 
+		if(requestedSize < 1) 
 		{
-			System.out.println("Invalid Memory Size");
+			System.out.println("Invalid Memory Size. Size must be greater than 0.");
 			return InvalidMemorySize;
 		}
 		if(requestedSize == 1)
@@ -1212,6 +1240,71 @@ public class HYPOMachine
 		 */
 		System.out.println("No free OS memory");
 		return NoFreeMemory;
+	}
+	
+	/*****************************************************************************
+	 * Function: FreeOSMemory
+	 * 
+	 * Task Description:
+	 * 		Takes parameters ptr and size. ptr points to a block of allocated memory.
+	 * 		Size indicates the size of the block ptr is pointing to. We wish to add
+	 * 		This block back into the list of Free OS Memory, thereby allowing it to be
+	 * 		reallocated to another process.
+	 * 
+	 * Input Parameters:
+	 * 		ptr						Address of start of block we are freeing
+	 * 		size					Size of block we're freeing and adding back to OSFreeList
+	 * 
+	 * Output Parameters:
+	 * 		None
+	 * 
+	 * Function Return Value
+	 * 		>0: 	Address of allocated block of OS memory
+	 * 		-2:		AddressInvalidError				Invalid address error. Address must be within respective block: User Programs 0-2999, User Memory 3000-6999, OS Memory 7000-9999
+	 * 		-13:	NoFreeMemory					No free memory to allocate from list
+	 * 		-14:	InvalidMemorySize				Invalid Memory Size. Size must be greater than 0.
+	 * 			
+	 * Author: Jonathon Ku
+	 * Change Log:
+	 * 		3/3/2019: Wrote FreeOSMemory. Takes the ptr to a currently allocated
+	 * 		block of main memory and adds it to OSFreeList, which will allow it to
+	 * 		be reallocated. Check that the ptr and size are valid, if they are
+	 * 		add the block to the beginning of OSFreeList.
+	 ****************************************************************************/
+	private static long FreeOSMemory(long ptr, long size) 
+	{
+		/*
+		 * Check validity of ptr. Must be within OS Memory block, check against min
+		 * and max OS memory addresses. Also check that ptr + size is still within the 
+		 * bounds. 
+		 */
+		if(ptr > MAXOSMEMADDRESS || ptr < MINOSMEMADDRESS || ptr + size > MAXOSMEMADDRESS)
+		{
+			System.out.println("Invalid address error. Address must be within respective block: User Programs 0-2999, User Memory 3000-6999, OS Memory 7000-9999");
+			return AddressInvalidError;
+		}
+		/*
+		 * size must be greater than 0 to be valid. Additionally,
+		 * size must be atleast 2 to contain address of next block and size.
+		 */
+		if(size == 1) 
+		{
+			size = 2;
+		}
+		else if(size < 1)
+		{
+			System.out.println("Invalid Memory Size. Size must be greater than 0.");
+			return InvalidMemorySize;
+		}
+		/*
+		 * Return memory to OSFreeList. Insert at the beginning of the list. Set the 
+		 * pointer to next block of ptr to the pointer to next block of OSFreeList,
+		 * Set the size of ptr to size, set OSFreeList equal to ptr.
+		 */
+		MAINMEMORY[(int) ptr] = MAINMEMORY[(int) OSFreeList];
+		MAINMEMORY[(int) ptr + 1] = size;
+		OSFreeList = ptr;
+		return Success;
 	}
 	
 	/*****************************************************************************
