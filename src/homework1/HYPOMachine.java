@@ -21,6 +21,7 @@
  * 				be specified by the programmer. 
  */
 package homework1;
+
 /*
  * Change Log:
  * 
@@ -31,10 +32,17 @@ package homework1;
  * and maximum addresses of each section of memory: User Program, User Dynamic, OS
  * Dynamic. Added error code for Success! Additional constant variables for the future
  * will include PCB indices for Priority, Size, NextPCB, etc.
+ * 
+ * 3/4/2019- JKU: Added final variables for Indices for consistent access of PCB items: 
+ * PID, State, Priority. Also added final variables for the three states of a PCB. Wrote
+ * InsertIntoRQ() method.
+ * 
  */
+
 //import java.util.LinkedList;
 import java.util.Scanner;
 import java.io.*;
+
 
 public class HYPOMachine 
 {
@@ -49,6 +57,13 @@ public class HYPOMachine
 	final private static long MAXUSERMEMADDRESS = 6999;			//Maximum address for User Memory block of memory
 	final private static long MINOSMEMADDRESS = 7000;			//Minimum address for OS Memory block of memory
 	final private static long MAXOSMEMADDRESS = 9999;			//Maximum address for OS Memory block of memory
+	final private static long PCBNEXTPCBINDEX = 0;
+	final private static long PCBPIDINDEX = 1;					//Index of PID in a PCB
+	final private static long PCBSTATEINDEX = 2;				//Index of State in PCB
+	final private static long PCBPRIORITYINDEX = 4;				//Index of Priority in PCB
+	final private static long READYSTATE = 1; 
+	final private static long RUNNINGSTATE = 2;
+	final private static long WAITINGSTATE = 3;
 	
 	private static long CLOCK;									//Keeps track of how long it has taken for execution
 	private static long MAR;									//Contains the current address of instruction in main memory
@@ -171,9 +186,9 @@ public class HYPOMachine
 	 * 		locations in a specific format.
 	 * 
 	 * Input Parameters:
-	 * 		String			String to be displayed
-	 * 		StartAddress	Start address of memory location
-	 * 		Size			Number of locations to dump
+	 * 		String					String to be displayed
+	 * 		StartAddress			Start address of memory location
+	 * 		Size					Number of locations to dump
 	 * 
 	 * Output Parameters:
 	 * 		None
@@ -1129,6 +1144,101 @@ public class HYPOMachine
 		}
 	}
 
+	/*****************************************************************************
+	 * Function: InsertIntoRQ
+	 * 
+	 * Task Description:
+	 * 		Takes a parameter long PCBptr which points to an address in memory
+	 * 		containing a PCB and inserts it into RQ. RQ will be ordered used for 
+	 * 		Priority Round Robin CPU scheduling, therefore we will insert the PCB
+	 * 		into RQ so the highest priority PCB is at the head.
+	 * 
+	 * Input Parameters:
+	 * 		PCBptr					Pointer to PCB in Main Memory
+	 * 
+	 * Output Parameters:
+	 * 		None
+	 * 
+	 * Function Return Value
+	 * 		>0: 	Address of allocated block of OS memory
+	 *		-2:	AddressInvalidError		Invalid address error. Address must be within respective block: User Programs 0-2999, User Memory 3000-6999, OS Memory 7000-9999
+	 * 	
+	 * Author: Jonathon Ku
+	 * Change Log:
+	 * 		3/4/2019: Wrote InsertIntoRQ. Takes a pointer to a PCB, iterates through RQ
+	 * 		to find where to insert PCBptr to maintain Priority ordering for Priority
+	 * 		Round Robin CPU scheduling.
+	 ****************************************************************************/
+	private static long InsertIntoRQ(long PCBptr)
+	{
+		//Set pointers to help iterate through PCB blocks in RQ. Set curPtr to head of RQ
+		long prevPtr = EOL;
+		long curPtr = RQ;
+		
+		//Check for invalid PCB Memory Address
+		if(PCBptr < 0 || PCBptr > MAXOSMEMADDRESS)
+		{
+			System.out.println("Invalid address error. Address must be within respective block: User Programs 0-2999, User Memory 3000-6999, OS Memory 7000-9999");
+			return AddressInvalidError;
+		}
+		
+		
+		MAINMEMORY[(int)(PCBptr + PCBSTATEINDEX)] = READYSTATE;	//Set state to ready state
+		MAINMEMORY[(int)(PCBptr + PCBNEXTPCBINDEX)] = EOL;						//Set next PCB pointer to EOL
+
+		//Check if RQ is empty
+		if(RQ == EOL)
+		{
+			RQ = PCBptr;
+			return Success;
+		}
+		
+		/*
+		 * Iterate through RQ and find where to insert. Priority from lowest to highest
+		 * is 0 to 255. Therefore, as we iterate, we compare the Priority of the PCB
+		 * from PCBptr and the Priority of the PCB from curPtr. If PCBptr has a higher
+		 * priorty than curPtr, we insert.
+		 */
+		while(curPtr != EOL)
+		{
+			if(MAINMEMORY[(int)(PCBptr + PCBPRIORITYINDEX)] > MAINMEMORY[(int)(curPtr + PCBPRIORITYINDEX)])
+			{
+				//Found where to insert
+				if(prevPtr == EOL)
+				{
+					/*
+					 * Enter PCB at the front of the list. Set the next PCB Pointer of 
+					 * PCBptr to RQ, thus appending RQ to PCBptr. Then set RQ to
+					 * PCBptr, which will point to the old RQ with PCBptr at the front.
+					 */
+					MAINMEMORY[(int)(PCBptr + PCBNEXTPCBINDEX)] = RQ;
+					RQ = PCBptr;
+					return Success;
+				}
+				/*
+				 * Enter PCB in the middle of the list. Set the next PCB Pointer of PCBptr
+				 * to prevPtr, thus appending the rest of RQ to PCBptr. Then set prevPtr
+				 * to PCBptr, which will append the front of RQ to PCBptr
+				 */
+				MAINMEMORY[(int)(PCBptr + PCBNEXTPCBINDEX)] = MAINMEMORY[(int)(prevPtr + PCBNEXTPCBINDEX)];
+				MAINMEMORY[(int)(prevPtr + PCBNEXTPCBINDEX)] = PCBptr;
+				return Success;
+			}
+			//PCBptr to be inserted has lower or equal priority to curPtr. Go to next PCB.
+			else
+			{
+				prevPtr = curPtr;
+				curPtr = MAINMEMORY[(int)(PCBptr + PCBNEXTPCBINDEX)];
+			}	
+		}
+		/*
+		 * While loop has ended and no place to insert was found. Insert PCB at end
+		 * of the RQ
+		 */
+		MAINMEMORY[(int)(prevPtr + PCBNEXTPCBINDEX)] = PCBptr;
+		return Success;
+	}
+	
 	/*****************************************************************************
 	 * Function: AllocateOSMemory
 	 * 
