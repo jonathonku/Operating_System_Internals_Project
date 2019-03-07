@@ -37,7 +37,7 @@ package homework1;
  * PID, State, Priority. Also added final variables for the three states of a PCB. Wrote
  * InsertIntoRQ() method.
  * 
- * 3/6/2019- JKU: Added WQ variable. Wrote InsertIntoWQ() method.
+ * 3/6/2019- JKU: Added WQ variable. Wrote InsertIntoWQ() method. Wrote 
  * 
  */
 
@@ -1410,7 +1410,7 @@ public class HYPOMachine
 	 * 		None
 	 * 
 	 * Function Return Value
-	 * 		>0: 	Address of allocated block of OS memory
+	 * 		 0:		Success							Successful Completion
 	 * 		-2:		AddressInvalidError				Invalid address error. Address must be within respective block: User Programs 0-2999, User Memory 3000-6999, OS Memory 7000-9999
 	 * 		-13:	NoFreeMemory					No free memory to allocate from list
 	 * 		-14:	InvalidMemorySize				Invalid Memory Size. Size must be greater than 0.
@@ -1429,7 +1429,7 @@ public class HYPOMachine
 		 * and max OS memory addresses. Also check that ptr + size is still within the 
 		 * bounds. 
 		 */
-		if(ptr > MAXOSMEMADDRESS || ptr < MINOSMEMADDRESS || ptr + size > MAXOSMEMADDRESS)
+		if(ptr > MAXOSMEMADDRESS || ptr < MINOSMEMADDRESS)
 		{
 			System.out.println("Invalid address error. Address must be within respective block: User Programs 0-2999, User Memory 3000-6999, OS Memory 7000-9999");
 			return AddressInvalidError;
@@ -1442,7 +1442,7 @@ public class HYPOMachine
 		{
 			size = 2;
 		}
-		else if(size < 1)
+		else if(size < 1 || ptr + size > MAXOSMEMADDRESS)
 		{
 			System.out.println("Invalid Memory Size. Size must be greater than 0.");
 			return InvalidMemorySize;
@@ -1464,8 +1464,7 @@ public class HYPOMachine
 	 * Task Description:
 	 * 		Takes a parameter long requestedSize and attempts to allocate a chunk of 
 	 * 		memory from UserFreeList of the appropriate size. It will return a long
-	 * 		containing the address in memory of the allocated memory. This address will
-	 * 		be used to initialize a PCB.
+	 * 		containing the address in memory of the allocated memory.
 	 * 
 	 * Input Parameters:
 	 * 		requestedSize			Size of block we're requesting for PCB
@@ -1480,7 +1479,7 @@ public class HYPOMachine
 	 * 	
 	 * Author: Jonathon Ku
 	 * Change Log:
-	 * 		3/2/2019: Wrote AllocateUserMemory. Takes a size, searches UserFreeList
+	 * 		3/6/2019: Wrote AllocateUserMemory. Takes a size, searches UserFreeList
 	 *  	for free block of greater than or equal size. Takes the free block out 
 	 *  	of the list and returns the address of the allocated memory block to client 
 	 *  	code. Not yet test.
@@ -1571,7 +1570,70 @@ public class HYPOMachine
 		return NoFreeMemory;
 	}
 	
-	
+	/*****************************************************************************
+	 * Function: FreeUserMemory
+	 * 
+	 * Task Description:
+	 * 		Takes parameters ptr and size. ptr points to a block of allocated memory.
+	 * 		Size indicates the size of the block ptr is pointing to. We wish to add
+	 * 		This block back into the list of Free User Memory, thereby allowing it to be
+	 * 		reallocated to another process.
+	 * 
+	 * Input Parameters:
+	 * 		ptr						Address of start of block we are freeing
+	 * 		size					Size of block we're freeing and adding back to UserFreeList
+	 * 
+	 * Output Parameters:
+	 * 		None
+	 * 
+	 * Function Return Value
+	 * 		 0:		Success							Successful Completion
+	 * 		-2:		AddressInvalidError				Invalid address error. Address must be within respective block: User Programs 0-2999, User Memory 3000-6999, OS Memory 7000-9999
+	 * 		-13:	NoFreeMemory					No free memory to allocate from list
+	 * 		-14:	InvalidMemorySize				Invalid Memory Size. Size must be greater than 0.
+	 * 			
+	 * Author: Jonathon Ku
+	 * Change Log:
+	 * 		3/6/2019: Wrote FreeUserMemory. Takes the ptr to a currently allocated
+	 * 		block of main memory and adds it to UserFreeList, which will allow it to
+	 * 		be reallocated. Check that the ptr and size are valid, if they are
+	 * 		add the block to the beginning of UserFreeList.
+	 ****************************************************************************/
+	private static long FreeUserMemory(long ptr, long size) 
+	{
+		/*
+		 * Check validity of ptr. Must be within User Memory block, check against min
+		 * and max User memory addresses. Also check that ptr + size is still within 
+		 * the bounds. 
+		 */
+		if(ptr > MAXUSERMEMADDRESS || ptr < MINUSERMEMADDRESS)
+		{
+			System.out.println("Invalid address error. Address must be within respective block: User Programs 0-2999, User Memory 3000-6999, OS Memory 7000-9999");
+			return AddressInvalidError;
+		}
+		/*
+		 * size must be greater than 0 to be valid. Additionally,
+		 * size must be atleast 2 to contain address of next block and size.
+		 */
+		if(size == 1) 
+		{
+			size = 2;
+		}
+		else if(size < 1  || ptr + size > MAXUSERMEMADDRESS)
+		{
+			System.out.println("Invalid Memory Size. Size must be greater than 0.");
+			return InvalidMemorySize;
+		}
+		/*
+		 * Return memory to UserFreeList. Insert at the beginning of the list. Set the 
+		 * pointer to next block of ptr to the pointer to next block of UserFreeList,
+		 * Set the size of ptr to size, set UserFreeList equal to ptr.
+		 */
+		MAINMEMORY[(int) ptr] = MAINMEMORY[(int) UserFreeList];
+		MAINMEMORY[(int) ptr + 1] = size;
+		UserFreeList = ptr;
+		return Success;
+	}	
 	
 	/*****************************************************************************
 
