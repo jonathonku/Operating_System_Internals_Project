@@ -37,7 +37,10 @@ package homework1;
  * PID, State, Priority. Also added final variables for the three states of a PCB. Wrote
  * InsertIntoRQ() method.
  * 
- * 3/6/2019- JKU: Added WQ variable. Wrote InsertIntoWQ() method. Wrote 
+ * 3/6/2019- JKU: Added WQ variable. Wrote InsertIntoWQ() method. Wrote FreeUserMemory()
+ * method. Adjusted FreeUserMemory() and FreeOSMemory() logical statments.
+ * 
+ * 3/7/2019- JKU: Wrote SearchAndRemovePCBFromWQ() method.
  * 
  */
 
@@ -95,9 +98,9 @@ public class HYPOMachine
 	 * 		-10:	DivisionByZeroError				Cannot divide by zero.
 	 * 		-11:	StackOverFlowError				Stack is full. Max address 9999.
 	 * 		-12:	StackUnderFlowError				Stack is empty. Bottom of stack is 9900.
-	 * 		-13:	NoFreeMemory					No free memory to allocate from list.
-	 * 		-14:	InvalidMemorySize				Invalid Memory Size. Size must be greater than 0.
-	 * 		
+	 * 		-13:	NoFreeMemoryError				No free memory to allocate from list.
+	 * 		-14:	InvalidMemorySizeError			Invalid Memory Size. Size must be greater than 0.
+	 * 		-15: 	InvalidPIDError					Invalid PID. Not found in queue.
 	 * 	
 	 *****************************************************************************/
 	final static private long Success = 0;
@@ -113,8 +116,9 @@ public class HYPOMachine
 	final static private long DivisionByZeroError = -10;			
 	final static private long StackOverFlowError = -11;	
 	final static private long StackUnderFlowError = -12;
-	final static private long NoFreeMemory = -13;
-	final static private long InvalidMemorySize = -14;
+	final static private long NoFreeMemoryError = -13;
+	final static private long InvalidMemorySizeError = -14;
+	final static private long InvalidPIDError = -15;
 	
 	/*****************************************************************************
 	 * Function: InitializeSystem
@@ -1297,8 +1301,8 @@ public class HYPOMachine
 	 * 
 	 * Function Return Value
 	 * 			>0: 	Address of allocated block of OS memory
-	 * 			-13:	NoFreeMemory				No free memory to allocate from list
-	 * 			-14:	InvalidMemorySize			Invalid Memory Size. Size must be greater than 0.
+	 * 			-13:	NoFreeMemoryError				No free memory to allocate from list
+	 * 			-14:	InvalidMemorySizeError			Invalid Memory Size. Size must be greater than 0.
 	 * 	
 	 * Author: Jonathon Ku
 	 * Change Log:
@@ -1316,7 +1320,7 @@ public class HYPOMachine
 		if(OSFreeList == EOL) 
 		{
 			System.out.println("No free memory to allocate from list.");
-			return NoFreeMemory;
+			return NoFreeMemoryError;
 		}
 		/*
 		 * requestedSize must be greater than 0 to be valid. Additionally,
@@ -1325,7 +1329,7 @@ public class HYPOMachine
 		if(requestedSize < 1) 
 		{
 			System.out.println("Invalid Memory Size. Size must be greater than 0.");
-			return InvalidMemorySize;
+			return InvalidMemorySizeError;
 		}
 		if(requestedSize == 1)
 		{
@@ -1390,7 +1394,7 @@ public class HYPOMachine
 		 * OS memory
 		 */
 		System.out.println("No free OS memory");
-		return NoFreeMemory;
+		return NoFreeMemoryError;
 	}
 	
 	/*****************************************************************************
@@ -1412,8 +1416,8 @@ public class HYPOMachine
 	 * Function Return Value
 	 * 		 0:		Success							Successful Completion
 	 * 		-2:		AddressInvalidError				Invalid address error. Address must be within respective block: User Programs 0-2999, User Memory 3000-6999, OS Memory 7000-9999
-	 * 		-13:	NoFreeMemory					No free memory to allocate from list
-	 * 		-14:	InvalidMemorySize				Invalid Memory Size. Size must be greater than 0.
+	 * 		-13:	NoFreeMemoryError					No free memory to allocate from list
+	 * 		-14:	InvalidMemorySizeError				Invalid Memory Size. Size must be greater than 0.
 	 * 			
 	 * Author: Jonathon Ku
 	 * Change Log:
@@ -1445,7 +1449,7 @@ public class HYPOMachine
 		else if(size < 1 || ptr + size > MAXOSMEMADDRESS)
 		{
 			System.out.println("Invalid Memory Size. Size must be greater than 0.");
-			return InvalidMemorySize;
+			return InvalidMemorySizeError;
 		}
 		/*
 		 * Return memory to OSFreeList. Insert at the beginning of the list. Set the 
@@ -1474,8 +1478,8 @@ public class HYPOMachine
 	 * 
 	 * Function Return Value
 	 * 			>0: 	Address of allocated block of OS memory
-	 * 			-13:	NoFreeMemory				No free memory to allocate from list
-	 * 			-14:	InvalidMemorySize			Invalid Memory Size. Size must be greater than 0.
+	 * 			-13:	NoFreeMemoryError				No free memory to allocate from list
+	 * 			-14:	InvalidMemorySizeError			Invalid Memory Size. Size must be greater than 0.
 	 * 	
 	 * Author: Jonathon Ku
 	 * Change Log:
@@ -1493,7 +1497,7 @@ public class HYPOMachine
 		if(UserFreeList == EOL) 
 		{
 			System.out.println("No free memory to allocate from list.");
-			return NoFreeMemory;
+			return NoFreeMemoryError;
 		}	
 		/*
 		 * requestedSize must be greater than 0 to be valid. Additionally,
@@ -1502,7 +1506,7 @@ public class HYPOMachine
 		if(requestedSize < 1) 
 		{
 			System.out.println("Invalid Memory Size. Size must be greater than 0.");
-			return InvalidMemorySize;
+			return InvalidMemorySizeError;
 		}
 		if(requestedSize == 1)
 		{
@@ -1567,7 +1571,7 @@ public class HYPOMachine
 		 * OS memory
 		 */
 		System.out.println("No free OS memory");
-		return NoFreeMemory;
+		return NoFreeMemoryError;
 	}
 	
 	/*****************************************************************************
@@ -1587,10 +1591,10 @@ public class HYPOMachine
 	 * 		None
 	 * 
 	 * Function Return Value
-	 * 		 0:		Success							Successful Completion
-	 * 		-2:		AddressInvalidError				Invalid address error. Address must be within respective block: User Programs 0-2999, User Memory 3000-6999, OS Memory 7000-9999
-	 * 		-13:	NoFreeMemory					No free memory to allocate from list
-	 * 		-14:	InvalidMemorySize				Invalid Memory Size. Size must be greater than 0.
+	 * 		 0:		Success								Successful Completion
+	 * 		-2:		AddressInvalidError					Invalid address error. Address must be within respective block: User Programs 0-2999, User Memory 3000-6999, OS Memory 7000-9999
+	 * 		-13:	NoFreeMemoryError					No free memory to allocate from list
+	 * 		-14:	InvalidMemorySizeError				Invalid Memory Size. Size must be greater than 0.
 	 * 			
 	 * Author: Jonathon Ku
 	 * Change Log:
@@ -1622,7 +1626,7 @@ public class HYPOMachine
 		else if(size < 1  || ptr + size > MAXUSERMEMADDRESS)
 		{
 			System.out.println("Invalid Memory Size. Size must be greater than 0.");
-			return InvalidMemorySize;
+			return InvalidMemorySizeError;
 		}
 		/*
 		 * Return memory to UserFreeList. Insert at the beginning of the list. Set the 
@@ -1634,6 +1638,68 @@ public class HYPOMachine
 		UserFreeList = ptr;
 		return Success;
 	}	
+	
+	/*****************************************************************************
+	 * Function: SearchAndRemovePCBFromWQ
+	 * 
+	 * Task Description:
+	 * 		Takes parameters pid and searches WQ for PCB with pid. Then returns a PCB
+	 * 		pointer if it is found, otherwise, returns an Invalid PID error
+	 * 
+	 * Input Parameters:
+	 * 		pid						pid of PCB we are searching for			
+	 * 	
+	 * Output Parameters:
+	 * 		None
+	 * 
+	 * Function Return Value
+	 * 		>0:		Success								Desired PCB Pointer		
+	 * 		-2:		AddressInvalidError					Invalid address error. Address must be within respective block: User Programs 0-2999, User Memory 3000-6999, OS Memory 7000-9999
+	 * 		-13:	NoFreeMemoryError					No free memory to allocate from list
+	 * 		-14:	InvalidMemorySizeError				Invalid Memory Size. Size must be greater than 0.
+	 * 		-15: 	InvalidPIDError						Invalid PID. Not found in queue.	
+	 * Author: Jonathon Ku
+	 * Change Log:
+	 * 		3/6/2019: Wrote SearchAndRemovePCBFromWQ. Take a pid, searches through PCBs
+	 * 		in WQ and compares their pid. If they are equal, desired PCB is found,
+	 * 		return PCB pointer. Otherwise, return error
+	 ****************************************************************************/
+	
+	public static long SearchAndRemovePCBFromWQ(long pid)
+	{
+		long curPCB = WQ;
+		long prevPCB = EOL;
+		
+		/*
+		 * Iterate through WQ. Compare curPCB's PID using PCBPIDINDEX value + curPCB
+		 * and pid. If match is found, remove it from WQ and return curPCB
+		 */
+		while(curPCB != EOL) 
+		{
+			if(MAINMEMORY[(int)(curPCB + PCBPIDINDEX)] == pid)
+			{
+				/*
+				 * Match is found, remove from WQ appropriately
+				 * Case 1: It's found at the front of the list
+				 * Case 2: It's found elsewhere in the list 
+				 */
+				if(prevPCB == EOL) //Front of WQ
+				{
+					WQ = MAINMEMORY[(int)(curPCB + PCBNEXTPCBINDEX)]; //Set front of WQ to the next PCB in WQ
+				}
+				else	//Elsewhere in WQ
+				{
+					MAINMEMORY[(int)(prevPCB + PCBNEXTPCBINDEX)] = MAINMEMORY[(int)(curPCB + PCBNEXTPCBINDEX)]; //Point previous PCB to next PCB, skipping over current PCB.
+				}
+				MAINMEMORY[(int)(curPCB + PCBNEXTPCBINDEX)] = EOL; //Remove all connections of curPCB by setting it to EOL.
+				return(curPCB);
+			}
+			prevPCB = curPCB;
+			curPCB = MAINMEMORY[(int)(curPCB + PCBNEXTPCBINDEX)];
+		}
+		System.out.println("Invalid PID Error. PID not found in queue");
+		return InvalidPIDError;
+	}
 	
 	/*****************************************************************************
 
