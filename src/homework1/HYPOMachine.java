@@ -37,6 +37,11 @@ package homework1;
  * PID, State, Priority. Also added final variables for the three states of a PCB. Wrote
  * InsertIntoRQ() method.
  * 
+ * 3/6/2019- JKU: Added WQ variable. Wrote InsertIntoWQ() method. Wrote FreeUserMemory()
+ * method. Adjusted FreeUserMemory() and FreeOSMemory() logical statments.
+ * 
+ * 3/7/2019- JKU: Wrote SearchAndRemovePCBFromWQ() method.
+ * 
  */
 
 //import java.util.LinkedList;
@@ -57,13 +62,13 @@ public class HYPOMachine
 	final private static long MAXUSERMEMADDRESS = 6999;			//Maximum address for User Memory block of memory
 	final private static long MINOSMEMADDRESS = 7000;			//Minimum address for OS Memory block of memory
 	final private static long MAXOSMEMADDRESS = 9999;			//Maximum address for OS Memory block of memory
-	final private static long PCBNEXTPCBINDEX = 0;
+	final private static long PCBNEXTPCBINDEX = 0;				//Index of Next PCB Address in a PCB
 	final private static long PCBPIDINDEX = 1;					//Index of PID in a PCB
 	final private static long PCBSTATEINDEX = 2;				//Index of State in PCB
 	final private static long PCBPRIORITYINDEX = 4;				//Index of Priority in PCB
-	final private static long READYSTATE = 1; 
-	final private static long RUNNINGSTATE = 2;
-	final private static long WAITINGSTATE = 3;
+	final private static long READYSTATE = 1; 					//Value to indicate Ready State of a PCB
+	final private static long RUNNINGSTATE = 2;					//Value to indicate Running State of a PCB
+	final private static long WAITINGSTATE = 3;					//Value to indicate Waiting State of a PCB
 	
 	private static long CLOCK;									//Keeps track of how long it has taken for execution
 	private static long MAR;									//Contains the current address of instruction in main memory
@@ -73,6 +78,7 @@ public class HYPOMachine
 	private static long PC;										//Contains the memory address of the instruction being executed
 	private static long SP;										//Points to the current address of the stack in memory
 	private static long RQ = EOL;								//Pointer to the head of the Ready Queue
+	private static long WQ = EOL;								//Pointer to the head of the Wait Queue
 	private static long UserFreeList = EOL;						//Pointer to the head of User Free Memory List
 	private static long OSFreeList = EOL;						//Pointer to the head of OS Free Memory List
 	private static long PID;									//Keeps track of next Process ID is available.
@@ -92,9 +98,9 @@ public class HYPOMachine
 	 * 		-10:	DivisionByZeroError				Cannot divide by zero.
 	 * 		-11:	StackOverFlowError				Stack is full. Max address 9999.
 	 * 		-12:	StackUnderFlowError				Stack is empty. Bottom of stack is 9900.
-	 * 		-13:	NoFreeMemory					No free memory to allocate from list.
-	 * 		-14:	InvalidMemorySize				Invalid Memory Size. Size must be greater than 0.
-	 * 		
+	 * 		-13:	NoFreeMemoryError				No free memory to allocate from list.
+	 * 		-14:	InvalidMemorySizeError			Invalid Memory Size. Size must be greater than 0.
+	 * 		-15: 	InvalidPIDError					Invalid PID. Not found in queue.
 	 * 	
 	 *****************************************************************************/
 	final static private long Success = 0;
@@ -110,8 +116,9 @@ public class HYPOMachine
 	final static private long DivisionByZeroError = -10;			
 	final static private long StackOverFlowError = -11;	
 	final static private long StackUnderFlowError = -12;
-	final static private long NoFreeMemory = -13;
-	final static private long InvalidMemorySize = -14;
+	final static private long NoFreeMemoryError = -13;
+	final static private long InvalidMemorySizeError = -14;
+	final static private long InvalidPIDError = -15;
 	
 	/*****************************************************************************
 	 * Function: InitializeSystem
@@ -1238,6 +1245,44 @@ public class HYPOMachine
 		MAINMEMORY[(int)(prevPtr + PCBNEXTPCBINDEX)] = PCBptr;
 		return Success;
 	}
+
+	/*****************************************************************************
+	 * Function: InsertIntoWQ
+	 * 
+	 * Task Description:
+	 * 		Takes a parameter long PCBptr which points to an address in memory
+	 * 		containing a PCB and inserts it into WQ. WQ will be unordered is not used
+	 * 		for CPU scheduling so it does not to be ordered
+	 * 
+	 * Input Parameters:
+	 * 		PCBptr					Pointer to PCB in Main Memory
+	 * 
+	 * Output Parameters:
+	 * 		None
+	 * 
+	 * Function Return Value
+	 * 		>0: 	Address of allocated block of OS memory
+	 *		-2:	AddressInvalidError		Invalid address error. Address must be within respective block: User Programs 0-2999, User Memory 3000-6999, OS Memory 7000-9999
+	 * 	
+	 * Author: Jonathon Ku
+	 * Change Log:
+	 * 		3/6/2019: Wrote InsertIntoWQ. Takes a pointer to a PCB, checks to ensure it
+	 * 		is a valid address and then inserts it at the front of the queue.
+	 ****************************************************************************/
+
+	private static long InsertIntoWQ(long PCBptr) 
+	{
+		if(PCBptr < 0 || PCBptr > MAXOSMEMADDRESS)
+		{
+			System.out.println("Invalid address error. Address must be within respective block: User Programs 0-2999, User Memory 3000-6999, OS Memory 7000-9999");
+			return AddressInvalidError;
+		}
+		MAINMEMORY[(int)(PCBptr + PCBSTATEINDEX)] = WAITINGSTATE;	//Set state to ready state
+		MAINMEMORY[(int)(PCBptr + PCBNEXTPCBINDEX)] = EOL;						//Set next PCB pointer to EOL
+		WQ = PCBptr;
+		
+		return Success;
+	}
 	
 	/*****************************************************************************
 	 * Function: AllocateOSMemory
@@ -1256,8 +1301,8 @@ public class HYPOMachine
 	 * 
 	 * Function Return Value
 	 * 			>0: 	Address of allocated block of OS memory
-	 * 			-13:	NoFreeMemory				No free memory to allocate from list
-	 * 			-14:	InvalidMemorySize			Invalid Memory Size. Size must be greater than 0.
+	 * 			-13:	NoFreeMemoryError				No free memory to allocate from list
+	 * 			-14:	InvalidMemorySizeError			Invalid Memory Size. Size must be greater than 0.
 	 * 	
 	 * Author: Jonathon Ku
 	 * Change Log:
@@ -1275,7 +1320,7 @@ public class HYPOMachine
 		if(OSFreeList == EOL) 
 		{
 			System.out.println("No free memory to allocate from list.");
-			return NoFreeMemory;
+			return NoFreeMemoryError;
 		}
 		/*
 		 * requestedSize must be greater than 0 to be valid. Additionally,
@@ -1284,7 +1329,7 @@ public class HYPOMachine
 		if(requestedSize < 1) 
 		{
 			System.out.println("Invalid Memory Size. Size must be greater than 0.");
-			return InvalidMemorySize;
+			return InvalidMemorySizeError;
 		}
 		if(requestedSize == 1)
 		{
@@ -1349,7 +1394,7 @@ public class HYPOMachine
 		 * OS memory
 		 */
 		System.out.println("No free OS memory");
-		return NoFreeMemory;
+		return NoFreeMemoryError;
 	}
 	
 	/*****************************************************************************
@@ -1369,10 +1414,10 @@ public class HYPOMachine
 	 * 		None
 	 * 
 	 * Function Return Value
-	 * 		>0: 	Address of allocated block of OS memory
+	 * 		 0:		Success							Successful Completion
 	 * 		-2:		AddressInvalidError				Invalid address error. Address must be within respective block: User Programs 0-2999, User Memory 3000-6999, OS Memory 7000-9999
-	 * 		-13:	NoFreeMemory					No free memory to allocate from list
-	 * 		-14:	InvalidMemorySize				Invalid Memory Size. Size must be greater than 0.
+	 * 		-13:	NoFreeMemoryError					No free memory to allocate from list
+	 * 		-14:	InvalidMemorySizeError				Invalid Memory Size. Size must be greater than 0.
 	 * 			
 	 * Author: Jonathon Ku
 	 * Change Log:
@@ -1388,7 +1433,7 @@ public class HYPOMachine
 		 * and max OS memory addresses. Also check that ptr + size is still within the 
 		 * bounds. 
 		 */
-		if(ptr > MAXOSMEMADDRESS || ptr < MINOSMEMADDRESS || ptr + size > MAXOSMEMADDRESS)
+		if(ptr > MAXOSMEMADDRESS || ptr < MINOSMEMADDRESS)
 		{
 			System.out.println("Invalid address error. Address must be within respective block: User Programs 0-2999, User Memory 3000-6999, OS Memory 7000-9999");
 			return AddressInvalidError;
@@ -1401,10 +1446,10 @@ public class HYPOMachine
 		{
 			size = 2;
 		}
-		else if(size < 1)
+		else if(size < 1 || ptr + size > MAXOSMEMADDRESS)
 		{
 			System.out.println("Invalid Memory Size. Size must be greater than 0.");
-			return InvalidMemorySize;
+			return InvalidMemorySizeError;
 		}
 		/*
 		 * Return memory to OSFreeList. Insert at the beginning of the list. Set the 
@@ -1415,6 +1460,245 @@ public class HYPOMachine
 		MAINMEMORY[(int) ptr + 1] = size;
 		OSFreeList = ptr;
 		return Success;
+	}
+
+	/*****************************************************************************
+	 * Function: AllocateUserMemory
+	 * 
+	 * Task Description:
+	 * 		Takes a parameter long requestedSize and attempts to allocate a chunk of 
+	 * 		memory from UserFreeList of the appropriate size. It will return a long
+	 * 		containing the address in memory of the allocated memory.
+	 * 
+	 * Input Parameters:
+	 * 		requestedSize			Size of block we're requesting for PCB
+	 * 
+	 * Output Parameters:
+	 * 		None
+	 * 
+	 * Function Return Value
+	 * 			>0: 	Address of allocated block of OS memory
+	 * 			-13:	NoFreeMemoryError				No free memory to allocate from list
+	 * 			-14:	InvalidMemorySizeError			Invalid Memory Size. Size must be greater than 0.
+	 * 	
+	 * Author: Jonathon Ku
+	 * Change Log:
+	 * 		3/6/2019: Wrote AllocateUserMemory. Takes a size, searches UserFreeList
+	 *  	for free block of greater than or equal size. Takes the free block out 
+	 *  	of the list and returns the address of the allocated memory block to client 
+	 *  	code. Not yet test.
+	 ****************************************************************************/
+	private static long AllocateUserMemory(long requestedSize) 
+	{
+		/*
+		 * UserFreeList is the pointer to the head of the list of Free User memory. If
+		 * it is equal to EOL, there is no more free space.
+		 */
+		if(UserFreeList == EOL) 
+		{
+			System.out.println("No free memory to allocate from list.");
+			return NoFreeMemoryError;
+		}	
+		/*
+		 * requestedSize must be greater than 0 to be valid. Additionally,
+		 * requestedSize must be atleast 2 to contain address of next block and size.
+		 */
+		if(requestedSize < 1) 
+		{
+			System.out.println("Invalid Memory Size. Size must be greater than 0.");
+			return InvalidMemorySizeError;
+		}
+		if(requestedSize == 1)
+		{
+			requestedSize = 2;
+		}
+		/*
+		 * Create pointers so that we can traverse the list of Free User Memory. Loop
+		 * through the list until we find a block of greater or equal size to
+		 * requestedSize. If it is not found on curPtr, set prevPtr to curPtr and
+		 * curPtr to next free block by setting it to the value contained in curPtr.
+		 */
+		long curPtr = UserFreeList;
+		long prevPtr =  EOL;
+		while(curPtr != EOL) {
+			//Found a block of requestedSize
+			if(MAINMEMORY[(int) curPtr + 1] == requestedSize)
+			{
+				
+				if(curPtr == UserFreeList) //Found in first block
+				{
+					UserFreeList = MAINMEMORY[(int)curPtr]; //set first block of UserFreeList to the next block
+					MAINMEMORY[(int)curPtr] = EOL; //reset pointer to next block to EOL so it is completely removed from the list
+					return curPtr; //return memory address of allocated OS block
+				}
+				else //Found but not in first block
+				{
+					MAINMEMORY[(int)prevPtr] = MAINMEMORY[(int)curPtr]; //set next block of prev block to current block's next block.
+					MAINMEMORY[(int)curPtr] = EOL; //reset pointer to next block to EOL so it is completely removed from the list
+					return curPtr; //return memory address of allocated User block
+				}
+			}
+			//Found block with size greater than requestedSize
+			else if(MAINMEMORY[(int) curPtr + 1] > requestedSize)
+			{
+				if(curPtr == UserFreeList) //Found in first block
+				{
+					MAINMEMORY[(int) (curPtr + requestedSize)] = MAINMEMORY[(int) curPtr]; //Move address of next block to new block.
+					MAINMEMORY[(int) (curPtr + requestedSize + 1)] = MAINMEMORY[(int) curPtr + 1] - requestedSize; //Calculate size of new block and use it to set new block size index
+					UserFreeList = curPtr + requestedSize; //Point UserFreeList to new smaller block.
+					MAINMEMORY[(int) curPtr] = EOL; //reset pointer to next block to EOL so it is completely removed from the list
+					return curPtr; //return memory address of allocated User block
+				}
+				else //Found but not in first block
+				{
+					MAINMEMORY[(int) (curPtr + requestedSize)] = MAINMEMORY[(int) curPtr]; //Move address of next block to new block.
+					MAINMEMORY[(int) (curPtr + requestedSize + 1)] = MAINMEMORY[(int) curPtr + 1] - requestedSize; //Calculate size of new block and use it to set new block size index
+					MAINMEMORY[(int) prevPtr] = curPtr + requestedSize; //Point prev block's next block to new smaller block.
+					MAINMEMORY[(int) curPtr] = EOL; //reset pointer to next block to EOL so it is completely removed from the list
+					return curPtr; //return memory address of allocated User block
+				}
+			}
+			else //Current block is smaller than requestedSize
+			{
+				//Iterate to next block
+				prevPtr = curPtr;
+				curPtr = MAINMEMORY[(int) curPtr];
+			}
+		}
+		/*
+		 * We have not found a block that is larger than, or equal to requestedSize
+		 * and we have iterated through the whole list. Therefore, this is no free
+		 * OS memory
+		 */
+		System.out.println("No free OS memory");
+		return NoFreeMemoryError;
+	}
+	
+	/*****************************************************************************
+	 * Function: FreeUserMemory
+	 * 
+	 * Task Description:
+	 * 		Takes parameters ptr and size. ptr points to a block of allocated memory.
+	 * 		Size indicates the size of the block ptr is pointing to. We wish to add
+	 * 		This block back into the list of Free User Memory, thereby allowing it to be
+	 * 		reallocated to another process.
+	 * 
+	 * Input Parameters:
+	 * 		ptr						Address of start of block we are freeing
+	 * 		size					Size of block we're freeing and adding back to UserFreeList
+	 * 
+	 * Output Parameters:
+	 * 		None
+	 * 
+	 * Function Return Value
+	 * 		 0:		Success								Successful Completion
+	 * 		-2:		AddressInvalidError					Invalid address error. Address must be within respective block: User Programs 0-2999, User Memory 3000-6999, OS Memory 7000-9999
+	 * 		-13:	NoFreeMemoryError					No free memory to allocate from list
+	 * 		-14:	InvalidMemorySizeError				Invalid Memory Size. Size must be greater than 0.
+	 * 			
+	 * Author: Jonathon Ku
+	 * Change Log:
+	 * 		3/6/2019: Wrote FreeUserMemory. Takes the ptr to a currently allocated
+	 * 		block of main memory and adds it to UserFreeList, which will allow it to
+	 * 		be reallocated. Check that the ptr and size are valid, if they are
+	 * 		add the block to the beginning of UserFreeList.
+	 ****************************************************************************/
+	private static long FreeUserMemory(long ptr, long size) 
+	{
+		/*
+		 * Check validity of ptr. Must be within User Memory block, check against min
+		 * and max User memory addresses. Also check that ptr + size is still within 
+		 * the bounds. 
+		 */
+		if(ptr > MAXUSERMEMADDRESS || ptr < MINUSERMEMADDRESS)
+		{
+			System.out.println("Invalid address error. Address must be within respective block: User Programs 0-2999, User Memory 3000-6999, OS Memory 7000-9999");
+			return AddressInvalidError;
+		}
+		/*
+		 * size must be greater than 0 to be valid. Additionally,
+		 * size must be atleast 2 to contain address of next block and size.
+		 */
+		if(size == 1) 
+		{
+			size = 2;
+		}
+		else if(size < 1  || ptr + size > MAXUSERMEMADDRESS)
+		{
+			System.out.println("Invalid Memory Size. Size must be greater than 0.");
+			return InvalidMemorySizeError;
+		}
+		/*
+		 * Return memory to UserFreeList. Insert at the beginning of the list. Set the 
+		 * pointer to next block of ptr to the pointer to next block of UserFreeList,
+		 * Set the size of ptr to size, set UserFreeList equal to ptr.
+		 */
+		MAINMEMORY[(int) ptr] = MAINMEMORY[(int) UserFreeList];
+		MAINMEMORY[(int) ptr + 1] = size;
+		UserFreeList = ptr;
+		return Success;
+	}	
+	
+	/*****************************************************************************
+	 * Function: SearchAndRemovePCBFromWQ
+	 * 
+	 * Task Description:
+	 * 		Takes parameters pid and searches WQ for PCB with pid. Then returns a PCB
+	 * 		pointer if it is found, otherwise, returns an Invalid PID error
+	 * 
+	 * Input Parameters:
+	 * 		pid						pid of PCB we are searching for			
+	 * 	
+	 * Output Parameters:
+	 * 		None
+	 * 
+	 * Function Return Value
+	 * 		>0:		Success								Desired PCB Pointer		
+	 * 		-2:		AddressInvalidError					Invalid address error. Address must be within respective block: User Programs 0-2999, User Memory 3000-6999, OS Memory 7000-9999
+	 * 		-13:	NoFreeMemoryError					No free memory to allocate from list
+	 * 		-14:	InvalidMemorySizeError				Invalid Memory Size. Size must be greater than 0.
+	 * 		-15: 	InvalidPIDError						Invalid PID. Not found in queue.	
+	 * Author: Jonathon Ku
+	 * Change Log:
+	 * 		3/6/2019: Wrote SearchAndRemovePCBFromWQ. Take a pid, searches through PCBs
+	 * 		in WQ and compares their pid. If they are equal, desired PCB is found,
+	 * 		return PCB pointer. Otherwise, return error
+	 ****************************************************************************/
+	
+	public static long SearchAndRemovePCBFromWQ(long pid)
+	{
+		long curPCB = WQ;
+		long prevPCB = EOL;
+		
+		/*
+		 * Iterate through WQ. Compare curPCB's PID using PCBPIDINDEX value + curPCB
+		 * and pid. If match is found, remove it from WQ and return curPCB
+		 */
+		while(curPCB != EOL) 
+		{
+			if(MAINMEMORY[(int)(curPCB + PCBPIDINDEX)] == pid)
+			{
+				/*
+				 * Match is found, remove from WQ appropriately
+				 * Case 1: It's found at the front of the list
+				 * Case 2: It's found elsewhere in the list 
+				 */
+				if(prevPCB == EOL) //Front of WQ
+				{
+					WQ = MAINMEMORY[(int)(curPCB + PCBNEXTPCBINDEX)]; //Set front of WQ to the next PCB in WQ
+				}
+				else	//Elsewhere in WQ
+				{
+					MAINMEMORY[(int)(prevPCB + PCBNEXTPCBINDEX)] = MAINMEMORY[(int)(curPCB + PCBNEXTPCBINDEX)]; //Point previous PCB to next PCB, skipping over current PCB.
+				}
+				MAINMEMORY[(int)(curPCB + PCBNEXTPCBINDEX)] = EOL; //Remove all connections of curPCB by setting it to EOL.
+				return(curPCB);
+			}
+			prevPCB = curPCB;
+			curPCB = MAINMEMORY[(int)(curPCB + PCBNEXTPCBINDEX)];
+		}
+		System.out.println("Invalid PID Error. PID not found in queue");
+		return InvalidPIDError;
 	}
 	
 	/*****************************************************************************
