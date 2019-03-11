@@ -42,6 +42,13 @@ package homework1;
  * 
  * 3/7/2019- JKU: Wrote SearchAndRemovePCBFromWQ() method.
  * 
+ * Author India Ervin: 
+ * 
+ * Change log 3/11/2019
+ * I cleaned out the Assembler Function code.
+ * I understand that it is impressive but it makes the actual code 
+ * difficult to read
+ *		
  */
 
 //import java.util.LinkedList;
@@ -340,28 +347,9 @@ public class HYPOMachine
 	{
 		//Local Variables
 		String temp = "";	//Used to contain each line of the file without redeclaring temp
-		/* 
-		This Code is for Assembler Function (which doesn't exist)
-		int origin = 0;
-		String writeMachineComments = fileName.substring(0, fileName.length()-4) + "MachineCodeComments.txt";
-		String writeMachineCode = fileName.substring(0, fileName.length()-4) + "MachineCode.txt";
-		String writeSymbolTable = fileName.substring(0, fileName.length()-4) + "SymbolTable.txt";
-		String separator = System.lineSeparator();
-		String[] mnemonics = {"Halt", "Add", "Subtract", "Multiply", "Divide", "Move", 
-				"Branch", "BrOnMinus", "BrOnPlus", "BrOnZero", "Push", "Pop", "SystemCall"};
-		LinkedList<Symbol> symbolLabel = new LinkedList<Symbol>();
-		int labelCounter = 0;
-		int address = 0;
-		*/
 		
 		try 
 		{
-			/* This Code is for Assembler Function (which doesn't exist)
-			FileWriter fileMachineComments = new FileWriter(new File(writeMachineComments));
-			FileWriter fileMachineCode = new FileWriter(new File(writeMachineCode));
-			FileWriter fileSymbolTable = new FileWriter(new File(writeSymbolTable));
-			*/
-			//Declare and initialize a scanner to try and read file specified by fileName
 			Scanner fileReader = new Scanner(new File(fileName));	
 			//Loop through file line by line until end of file or end of program indicator
 			while(fileReader.hasNextLine())
@@ -411,89 +399,20 @@ public class HYPOMachine
 					fileReader.close();
 					return AddressInvalidError;
 				}
-				/* This Code and Documentation is for Assembler Function (which doesn't exist)
-				 * Split the line based on the \t character to achieve indices which
-				 * line up with appropriate columns. Due to inconsistent tabbing
-				 * caused by word length, we must remove all elements in delimed array
-				 * which are equivalent to "". 
-				 * Because the first column contains either a label or not, we are able
-				 * to copy delimed[0] to labels[0]. The third column may or may not
-				 * contain operands, so we fill it with "" so it does not remain null.
-				 * The last column will always contain the last element in the delimed
-				 * array.
-				 * Then iterate through delimed to pull the elements between the first
-				 * and last elements, which are not "" and put them in the second and
-				 * third column, depending on the order they appear.
-				String[] delimed = temp.split("\t");
-				String[] labels = new String[4];
-				labelCounter = 1;
-				labels[0] = delimed[0];
-				labels[2] = "";
-				labels[3] = delimed[delimed.length-1];
-				for(int j = 1; j < delimed.length-1; j++)
-				{
-					if(!(delimed[j].equals("")))
-					{
-						labels[labelCounter] = delimed[j];
-						labelCounter++;
-					}
-				}				
-				if(labels[0].equals("Label"))
-				{
-					fileMachineComments.write("Address\tContent\tComment" + separator);
-					fileMachineComments.flush();
-					
-					fileSymbolTable.write("Symbol\tValue(Address)" + separator);
-					fileSymbolTable.flush();
-				}
-				else if(labels[0].equals("main"))
-				{
-					origin = address;
-					fileSymbolTable.write(labels[0] + "\t" + address + separator);
-					fileSymbolTable.flush();
-				}
-				else if(!(temp.subSequence(0, 1).equals("\t")))
-				{
-					fileSymbolTable.write(labels[0] + "\t" + address + separator);
-					fileSymbolTable.flush();
-					address++;
-					symbolLabel.add(new Symbol(address, labels[0]));
-					
-					for(int mnemonicCheck = 0; mnemonicCheck < mnemonics.length; mnemonicCheck++) 
-					{
-						if(mnemonics[mnemonicCheck].equals(labels[1]))
-						{
-							fileMachineComments.write(address + "\t" + mnemonicCheck + "\t" + labels[3] + separator);
-							fileMachineCode.write(address + "\t" + mnemonicCheck + separator);
-							String[] operands = labels[2].split(",");
-							
-							for(int i = 0; i < operands.length; i++) 
-							{
-								System.out.print(i + "\t" + operands[i] + "\t");				
-							}
-							System.out.println();
-							
-							address++;
-						}							
-					}
-				}
-				*/				
-			}
-			/* If file is read through without finding an end of program indicator
-			 * display error message return error code.
-			 */
-			System.out.println("End of program reached without indicator");
-			fileReader.close();
-			return NoEndOfProgramError;
-			/*
-			fileMachineComments.close();
-			fileMachineCode.close();
-			*/
-		}
+				
 		/* If FileNotFoundException is caught, display error message and return error.
 		 * If program reached outside of the try/catch structure, file is also not read
 		 * and displays the same message.
 		 */
+		/* If file is read through without finding an end of program indicator
+		 * display error message return error code.
+		 */
+		     }
+		System.out.println("End of program reached without indicator");
+		fileReader.close();
+		return NoEndOfProgramError;
+			}
+		
 		catch(Exception e)
 		{
 			if(e instanceof FileNotFoundException)
@@ -505,6 +424,7 @@ public class HYPOMachine
 		System.out.println("File open error.");
 		return FileOpenError;
 	}
+	
 	
 	/*****************************************************************************
 	 * Function: ExecuteProgram
@@ -1765,29 +1685,6 @@ public class HYPOMachine
 	}
 }
 
-
-
-/* Used for Assembler function (which does not exist).
-class Symbol
-{
-	private long address;
-	private String label;
-	public Symbol(long address, String label)
-	{
-		this.address = address;
-		this.label = label;
-	}
-	public long getAddress() 
-	{
-		return address;
-	}
-	public String getLabel()
-	{
-		return label;
-	}
-	
-}
-*/
 
 /******************************************************************************
  * Local Class: Operand
