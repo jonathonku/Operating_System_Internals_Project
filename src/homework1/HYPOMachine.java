@@ -1269,7 +1269,6 @@ public class HYPOMachine
 	 * 		3/6/2019: Wrote InsertIntoWQ. Takes a pointer to a PCB, checks to ensure it
 	 * 		is a valid address and then inserts it at the front of the queue.
 	 ****************************************************************************/
-
 	private static long InsertIntoWQ(long PCBptr) 
 	{
 		if(PCBptr < 0 || PCBptr > MAXOSMEMADDRESS)
@@ -1658,13 +1657,13 @@ public class HYPOMachine
 	 * 		-13:	NoFreeMemoryError					No free memory to allocate from list
 	 * 		-14:	InvalidMemorySizeError				Invalid Memory Size. Size must be greater than 0.
 	 * 		-15: 	InvalidPIDError						Invalid PID. Not found in queue.	
+	 * 
 	 * Author: Jonathon Ku
 	 * Change Log:
 	 * 		3/6/2019: Wrote SearchAndRemovePCBFromWQ. Take a pid, searches through PCBs
 	 * 		in WQ and compares their pid. If they are equal, desired PCB is found,
 	 * 		return PCB pointer. Otherwise, return error
-	 ****************************************************************************/
-	
+	 ****************************************************************************/	
 	public static long SearchAndRemovePCBFromWQ(long pid)
 	{
 		long curPCB = WQ;
@@ -1700,7 +1699,7 @@ public class HYPOMachine
 		System.out.println("Invalid PID Error. PID not found in queue");
 		return InvalidPIDError;
 	}
-	
+
 	/*****************************************************************************
 
 	 * Function: Main
