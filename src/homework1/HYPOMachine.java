@@ -1269,7 +1269,6 @@ public class HYPOMachine
 	 * 		3/6/2019: Wrote InsertIntoWQ. Takes a pointer to a PCB, checks to ensure it
 	 * 		is a valid address and then inserts it at the front of the queue.
 	 ****************************************************************************/
-
 	private static long InsertIntoWQ(long PCBptr) 
 	{
 		if(PCBptr < 0 || PCBptr > MAXOSMEMADDRESS)
@@ -1658,13 +1657,13 @@ public class HYPOMachine
 	 * 		-13:	NoFreeMemoryError					No free memory to allocate from list
 	 * 		-14:	InvalidMemorySizeError				Invalid Memory Size. Size must be greater than 0.
 	 * 		-15: 	InvalidPIDError						Invalid PID. Not found in queue.	
+	 * 
 	 * Author: Jonathon Ku
 	 * Change Log:
 	 * 		3/6/2019: Wrote SearchAndRemovePCBFromWQ. Take a pid, searches through PCBs
 	 * 		in WQ and compares their pid. If they are equal, desired PCB is found,
 	 * 		return PCB pointer. Otherwise, return error
-	 ****************************************************************************/
-	
+	 ****************************************************************************/	
 	public static long SearchAndRemovePCBFromWQ(long pid)
 	{
 		long curPCB = WQ;
@@ -1700,9 +1699,135 @@ public class HYPOMachine
 		System.out.println("Invalid PID Error. PID not found in queue");
 		return InvalidPIDError;
 	}
+
+	/*****************************************************************************
+	 * Function: MemAllocSystemCall
+	 * 
+	 * Task Description:
+	 * 		Allocates memory from user free list. GPR 2 has the size of the memory
+	 * 		to be allocated, GPR 1 will be set to the address returned by
+	 * 		AllocateUserMemory method.
+	 * 
+	 * Input Parameters:
+	 * 		None
+	 * 
+	 * Output Parameters:
+	 * 		None
+	 * 
+	 * Function Return Value 
+	 * 		>0:		Success								Address of allocated memory
+	 * 		-2:		AddressInvalidError					Invalid address error. Address must be within respective block: User Programs 0-2999, User Memory 3000-6999, OS Memory 7000-9999
+	 *		-13:	NoFreeMemoryError					No free memory to allocate from list			
+	 *		-14:	InvalidMemorySizeError				Invalid Memory Size. Size must be greater than 0
+	 * 
+	 * Author: Jonathon Ku
+	 * Change Log:
+	 * 		4/4/2019: Wrote MemAllocSystemCall method. Not yet tested.
+	 *****************************************************************************/
+	public static long MemAllocSystemCall() 
+	{
+		//Declare and initialize size to value in GPR 2
+		long size = GPRS[2];
+		/*
+		 * If size is greater than the maximum size allowed (the difference of the max
+		 * user address and the min user address), then the size is too large.
+		 * Otherwise, AllocateUserMemory will also return an error if the size requested
+		 * is too large for any free block to accommodate. GPR 0 contains the return
+		 * status, set GPR 0 to InvalidMemorySizeError, if applicable, and return it.
+		 */
+		if(size > (MAXUSERMEMADDRESS - MINUSERMEMADDRESS))
+		{
+			GPRS[0] = InvalidMemorySizeError;
+			return GPRS[0];
+		}
+		// If size is 1, change it to 2 because PCB requires a block for address and size
+		else if(size == 1)
+		{
+			size = 2;
+		}
+		/*
+ 		 * Set GPR 1 to address allocated from User Free Block, by AllocateUserMemory
+ 		 * method. If AllocateUserMemory method returns an error code, notated by a
+ 		 * negative number, set GPR 0 to that error code, otherwise, GPR 0 is OK status 0
+		 */
+		GPRS[1] = AllocateUserMemory(size);
+		if(GPRS[1] < 0)
+		{
+			GPRS[0] = GPRS[1];
+		}
+		else
+		{
+			GPRS[0] = Success;
+		}
+		
+		System.out.println("Memory Allocation System Call:" + 
+		"\nGPR0:\t" + GPRS[0] +
+		"\nGPR1:\t" + GPRS[1] +
+		"\nGPR2:\t" + GPRS[2]
+		);
+		return GPRS[0];
+	}
 	
 	/*****************************************************************************
-
+	 * Function: MemFreeSystemCall
+	 * 
+	 * Task Description:
+	 * 		Returns dynamically allocated user memory to user free list. GPR 1 has
+	 * 		memory addresses and GPR 2 has the memory size to be released.
+	 * 
+	 * Input Parameters:
+	 * 		None
+	 * 
+	 * Output Parameters:
+	 * 		None
+	 * 
+	 * Function Return Value 
+	 * 		>0:		Success								Address of allocated memory
+	 *		-2:		AddressInvalidError					Invalid address error. Address must be within respective block: User Programs 0-2999, User Memory 3000-6999, OS Memory 7000-9999		
+	 *		-13:	NoFreeMemoryError					No free memory to allocate from list			
+	 *		-14:	InvalidMemorySizeError				Invalid Memory Size. Size must be greater than 0
+	 * 
+	 * Author: Jonathon Ku
+	 * Change Log:
+	 * 		4/4/2019: Wrote MemFreeSystemCall method. Not yet tested.
+	 *****************************************************************************/
+	public static long MemFreeSystemCall() 
+	{
+		//Declare and initialize size to value in GPR 2
+		long size = GPRS[2];
+		/*
+		 * If size is greater than the maximum size allowed (the difference of the max
+		 * user address and the min user address), then the size is too large.
+		 * Otherwise, FreeUserMemory will also return an error if the size requested
+		 * is too large for any free block to accommodate. GPR 0 contains the return
+		 * status, set GPR 0 to InvalidMemorySizeError, if applicable, and return it.
+		 */
+		if(size > (MAXUSERMEMADDRESS - MINUSERMEMADDRESS))
+		{
+			GPRS[0] = InvalidMemorySizeError;
+			return GPRS[0];
+		}
+		// If size is 1, change it to 2 because PCB requires a block for address and size
+		else if(size == 1)
+		{
+			size = 2;
+		}
+		/*
+ 		 * Set GPR 1 to address allocated from User Free Block, by AllocateUserMemory
+ 		 * method. If FreeUserMemory method returns an error code, notated by a
+ 		 * negative number, set GPR 0 to that error code, otherwise, GPR 0 is OK status 0
+		 */
+		GPRS[0] = FreeUserMemory(GPRS[1] ,size);
+		
+		System.out.println("Memory Free System Call:" + 
+		"\nGPR0:\t" + GPRS[0] +
+		"\nGPR1:\t" + GPRS[1] +
+		"\nGPR2:\t" + GPRS[2]
+		);
+		return GPRS[0];
+	}	
+	
+	/*****************************************************************************
 	 * Function: Main
 	 * 
 	 * Task Description:
