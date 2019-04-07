@@ -1908,12 +1908,23 @@ public class HYPOMachine
 		Scanner userIn = new Scanner(System.in);
 		System.out.println("Please enter the PID of the process:");
 		int pidPtr = userIn.nextInt();
+		long prevPCB;
 
-		SearchAndRemovePCBFromWQ(pidPtr);
-		System.out.println("Please enter a character (A-Z): ");
-		char userChar = userIn.next().charAt(0);
-
-		////MAINMEMORY[pidPtr].
+		while(pidPtr != EOL) 
+		{
+			if(MAINMEMORY[(int)(pidPtr + PCBPIDINDEX)] == pidPtr)
+			{
+				SearchAndRemovePCBFromWQ(pidPtr);
+				System.out.println("Please enter a character (A-Z): ");
+				char userChar = userIn.next().charAt(0);
+				MAINMEMORY[(int)(pidPtr + PCBGPR0)] = userChar;
+				
+				InsertIntoRQ(pidPtr);
+				return;
+			}
+			prevPCB = pidPtr;
+			pidPtr = MAINMEMORY[(int)(pidPtr + PCBNEXTPCBINDEX)];
+		}
 	 }
 	 
 	 static void ISROutputCompletionInterrupt()
@@ -1922,20 +1933,21 @@ public class HYPOMachine
 
 		System.out.println("Please enter the process PID: ");
 		long PIDPtr = userIn.nextInt();
+		long prevPCB;
 
 
 		while(PIDPtr != EOL) 
 		{
-			if(MAINMEMORY[(int)(PIDPtr + PCBPIDINDEX)] == pid)
+			if(MAINMEMORY[(int)(PIDPtr + PCBPIDINDEX)] == PIDPtr)
 			{
-				SearchAndRemovePCBFromWQ(PIDptr);
+				SearchAndRemovePCBFromWQ(PIDPtr);
 				System.out.println(MAINMEMORY[(int)(PIDPtr + PCBGPR0)]);
-				MAINMEMORY[PIDPtr += PCBSTATEINDEX] = READYSTATE;
-				InsertIntoRQ(PCBptr);
+				MAINMEMORY[(int)(PIDPtr + PCBSTATEINDEX)] = READYSTATE;
+				InsertIntoRQ(PIDPtr);
 				return;
 			}
 			prevPCB = PIDPtr;
-			PIDPtr = MAINMEMORY[(int)(curPCB + PCBNEXTPCBINDEX)];
+			PIDPtr = MAINMEMORY[(int)(PIDPtr + PCBNEXTPCBINDEX)];
 		}
 
 		while(PIDPtr != EOL)
@@ -1944,10 +1956,8 @@ public class HYPOMachine
 			return;
 		}
 
-		System.out.println("Invalid PID, please enter valid PID")
-
-
-		
+		System.out.println("Invalid PID, please enter valid PID");
+		return;
 	}
 
 	static void ISRShutdownSystem()
