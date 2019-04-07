@@ -2,7 +2,7 @@
  * Author Name:	Jonathon Ku and Gabe and India
  * Student ID:	300994041
  * Class:		CSCI465
- * Assignment:	Homework 1
+ * Assignment:	Homework
  * Date:		2/8/2019
  * Description:	This program simulates the operation of a CPU within the main method. 
  * 				It first utilizes the InitializeSystem method to set all simulated 
@@ -20,7 +20,6 @@
  * 				formatted output of global variables, and a range of memory which can
  * 				be specified by the programmer. 
  */
-package homework1;
 
 /*
  * Change Log:
@@ -65,10 +64,13 @@ public class HYPOMachine
 	final private static long PCBNEXTPCBINDEX = 0;				//Index of Next PCB Address in a PCB
 	final private static long PCBPIDINDEX = 1;					//Index of PID in a PCB
 	final private static long PCBSTATEINDEX = 2;				//Index of State in PCB
-	final private static long PCBPRIORITYINDEX = 4;				//Index of Priority in PCB
+	final private static long PCBPRIORITYINDEX = 4;	
+	final private static long PCBGPR0 = 11;			//Index of Priority in PCB
 	final private static long READYSTATE = 1; 					//Value to indicate Ready State of a PCB
 	final private static long RUNNINGSTATE = 2;					//Value to indicate Running State of a PCB
 	final private static long WAITINGSTATE = 3;					//Value to indicate Waiting State of a PCB
+	final private static long DEFAULTPRIORITY = 128;			//Default Priority of Program
+
 	
 	private static long CLOCK;									//Keeps track of how long it has taken for execution
 	private static long MAR;									//Contains the current address of instruction in main memory
@@ -1826,6 +1828,158 @@ public class HYPOMachine
 		);
 		return GPRS[0];
 	}	
+
+	/*
+	// Function: 
+	// InitilizePCB
+	// 
+	// Task description:
+	// Initizize PCB Memory when called
+	// 
+	// Input:
+	// PCBPtr 
+	// 
+	// Author:
+	// Gabe Freitas
+	*/
+	private static void InitializePCB(long PCBPtr)
+	{
+		MAINMEMORY[(int)(PCBPtr + PCBPIDINDEX)] = PID++;
+		MAINMEMORY[(int)(PCBPtr + PCBPRIORITYINDEX)] = DEFAULTPRIORITY;
+		MAINMEMORY[(int)(PCBPtr + PCBSTATEINDEX)] = READYSTATE; 
+		MAINMEMORY[(int)(PCBPtr + PCBNEXTPCBINDEX)] = EOL;
+
+		return;
+	}
+
+	private static void CheckAndProcessInterrupt()
+	{
+		Scanner userIn = new Scanner(System.in);
+
+		System.out.println("Please enter the interrupt ID: ");
+		System.out.println("Possible interrupt IDs:");
+		System.out.println("0 - no interrupt");
+		System.out.println("1 - run program");
+		System.out.println("2 - shutdown system");
+		System.out.println("3 - input operation completion");
+		System.out.println("4 - Output operation complete");
+		int interruptID = userIn.nextInt();
+		System.out.println("Interrupt ID inputted: " + interruptID);
+
+		switch(interruptID)
+		{
+			case 0:
+				break;
+			case 1:
+				ISRRunProgramInterrupt();
+				break;
+
+ 			case 2:
+				ISRShutdownSystem();
+				break;
+
+ 			case 3: 
+				ISRInputCompletionInterrupt();
+				break;
+
+ 			case 4:
+				ISROutputCompletionInterrupt();
+				break;
+
+ 			default:
+				System.out.println("Invalid interrupt ID");
+				break;
+		}//end of InterruptIDSwitch
+		return;
+	}
+
+	static void ISRRunProgramInterrupt()
+	{
+		Scanner userIn = new Scanner(System.in);
+		System.out.println("Please enter the filename: ");
+		String fileName = userIn.nextLine();
+
+ 		//CreateProcess(fileName, DEFAULTPRIORITY);
+		return;
+	}
+
+ 	static void ISRInputCompletionInterrupt()
+	{
+		Scanner userIn = new Scanner(System.in);
+		System.out.println("Please enter the PID of the process:");
+		int pidPtr = userIn.nextInt();
+
+		SearchAndRemovePCBFromWQ(pidPtr);
+		System.out.println("Please enter a character (A-Z): ");
+		char userChar = userIn.next().charAt(0);
+
+		////MAINMEMORY[pidPtr].
+	 }
+	 
+	 static void ISROutputCompletionInterrupt()
+	{
+		Scanner userIn = new Scanner(System.in);
+
+		System.out.println("Please enter the process PID: ");
+		long PIDPtr = userIn.nextInt();
+
+
+		while(PIDPtr != EOL) 
+		{
+			if(MAINMEMORY[(int)(PIDPtr + PCBPIDINDEX)] == pid)
+			{
+				SearchAndRemovePCBFromWQ(PIDptr);
+				System.out.println(MAINMEMORY[(int)(PIDPtr + PCBGPR0)]);
+				MAINMEMORY[PIDPtr += PCBSTATEINDEX] = READYSTATE;
+				InsertIntoRQ(PCBptr);
+				return;
+			}
+			prevPCB = PIDPtr;
+			PIDPtr = MAINMEMORY[(int)(curPCB + PCBNEXTPCBINDEX)];
+		}
+
+		while(PIDPtr != EOL)
+		{
+			System.out.println(MAINMEMORY[(int)(PIDPtr + PCBGPR0)]);
+			return;
+		}
+
+		System.out.println("Invalid PID, please enter valid PID")
+
+
+		
+	}
+
+	static void ISRShutdownSystem()
+	{
+			/*
+		 * Return memory to UserFreeList. Insert at the beginning of the list. Set the 
+		 * pointer to next block of ptr to the pointer to next block of UserFreeList,
+		 * Set the size of ptr to size, set UserFreeList equal to ptr.
+		 */
+
+		 int ptr = (int)RQ;
+
+		 while(ptr != EOL)
+		 {
+			RQ = MAINMEMORY[(int)(ptr + PCBNEXTPCBINDEX)];
+			////TerminateProcess(ptr);
+			ptr = (int)RQ;
+		 }
+
+		ptr = (int)WQ;
+
+		while(ptr != EOL)
+		{
+			WQ = MAINMEMORY[(int)(ptr+ PCBNEXTPCBINDEX)];
+			////TerminateProcess(ptr);
+			ptr = (int)WQ;
+		}
+		return;
+	}
+
+
+
 	
 	/*****************************************************************************
 	 * Function: Main
