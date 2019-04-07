@@ -1844,6 +1844,10 @@ public class HYPOMachine
 	*/
 	private static void InitializePCB(long PCBPtr)
 	{
+		for(int pcbIndex = 1; pcbIndex <= 21; pcbIndex++)
+		{
+			MAINMEMORY[(int)(PCBPtr + pcbIndex)] = 0;
+		}
 		MAINMEMORY[(int)(PCBPtr + PCBPIDINDEX)] = PID++;
 		MAINMEMORY[(int)(PCBPtr + PCBPRIORITYINDEX)] = DEFAULTPRIORITY;
 		MAINMEMORY[(int)(PCBPtr + PCBSTATEINDEX)] = READYSTATE; 
@@ -1907,56 +1911,80 @@ public class HYPOMachine
 	{
 		Scanner userIn = new Scanner(System.in);
 		System.out.println("Please enter the PID of the process:");
-		int pidPtr = userIn.nextInt();
-		long prevPCB;
+		long desiredPID = userIn.nextInt();
+		long prevPCB = EOL;
+		long rqPCB = RQ;
+		long wqPCB = WQ;
 
-		while(pidPtr != EOL) 
+		while(wqPCB != EOL) 
 		{
-			if(MAINMEMORY[(int)(pidPtr + PCBPIDINDEX)] == pidPtr)
+			if(MAINMEMORY[(int)(wqPCB + PCBPIDINDEX)] == desiredPID)
 			{
-				SearchAndRemovePCBFromWQ(pidPtr);
+				SearchAndRemovePCBFromWQ(desiredPID);
 				System.out.println("Please enter a character (A-Z): ");
 				char userChar = userIn.next().charAt(0);
-				MAINMEMORY[(int)(pidPtr + PCBGPR0)] = userChar;
-				
-				InsertIntoRQ(pidPtr);
+				MAINMEMORY[(int)(desiredPID + PCBGPR0)] = userChar;
+				MAINMEMORY[(int)(desiredPID + PCBSTATEINDEX)] = READYSTATE;
+				InsertIntoRQ(desiredPID);
 				return;
 			}
-			prevPCB = pidPtr;
-			pidPtr = MAINMEMORY[(int)(pidPtr + PCBNEXTPCBINDEX)];
+
+			prevPCB = desiredPID;
+			wqPCB = MAINMEMORY[(int)(wqPCB + PCBNEXTPCBINDEX)];
 		}
+
+		while(rqPCB != EOL)
+		{
+			if(MAINMEMORY[(int)(rqPCB + PCBPIDINDEX)] == desiredPID)
+			{
+				System.out.println("Please enter a character (A-Z): ");
+				char userChar = userIn.next().charAt(0);
+				MAINMEMORY[(int)(desiredPID + PCBGPR0)] = userChar;
+			}
+			prevPCB = desiredPID;
+			wqPCB = MAINMEMORY[(int)(wqPCB + PCBNEXTPCBINDEX)];
+		}
+
+		System.out.println("Invalid PID: " + desiredPID +  ", please enter valid PID");
+		return;
 	 }
 	 
 	 static void ISROutputCompletionInterrupt()
 	{
 		Scanner userIn = new Scanner(System.in);
+		System.out.println("Please enter the PID: ");
+		long desiredPID = userIn.nextInt();
+		long prevPCB = EOL;
+		long wqPCB = WQ;
+		long rqPCB = RQ;
 
-		System.out.println("Please enter the process PID: ");
-		long PIDPtr = userIn.nextInt();
-		long prevPCB;
-
-
-		while(PIDPtr != EOL) 
+		while(wqPCB != EOL) 
 		{
-			if(MAINMEMORY[(int)(PIDPtr + PCBPIDINDEX)] == PIDPtr)
+			if(MAINMEMORY[(int)(wqPCB + PCBPIDINDEX)] == desiredPID)
 			{
-				SearchAndRemovePCBFromWQ(PIDPtr);
-				System.out.println(MAINMEMORY[(int)(PIDPtr + PCBGPR0)]);
-				MAINMEMORY[(int)(PIDPtr + PCBSTATEINDEX)] = READYSTATE;
-				InsertIntoRQ(PIDPtr);
+				SearchAndRemovePCBFromWQ(desiredPID);
+				System.out.println(MAINMEMORY[(int)(wqPCB + PCBGPR0)]);
+				MAINMEMORY[(int)(wqPCB + PCBSTATEINDEX)] = READYSTATE;
+				InsertIntoRQ(wqPCB);
 				return;
 			}
-			prevPCB = PIDPtr;
-			PIDPtr = MAINMEMORY[(int)(PIDPtr + PCBNEXTPCBINDEX)];
+			prevPCB = wqPCB;
+			wqPCB = MAINMEMORY[(int)(wqPCB + PCBNEXTPCBINDEX)];
 		}
 
-		while(PIDPtr != EOL)
+		while(rqPCB != EOL)
 		{
-			System.out.println(MAINMEMORY[(int)(PIDPtr + PCBGPR0)]);
-			return;
+			if(MAINMEMORY[(int)(rqPCB + PCBPIDINDEX)] == desiredPID)
+			{
+				System.out.println(MAINMEMORY[(int)(rqPCB + PCBGPR0)]);
+				return;
+			}
+
+			prevPCB = rqPCB;
+			rqPCB = MAINMEMORY[(int)(rqPCB + PCBNEXTPCBINDEX)];
 		}
 
-		System.out.println("Invalid PID, please enter valid PID");
+		System.out.println("Invalid PID: " + desiredPID +  ", please enter valid PID");
 		return;
 	}
 
@@ -1973,7 +2001,7 @@ public class HYPOMachine
 		 while(ptr != EOL)
 		 {
 			RQ = MAINMEMORY[(int)(ptr + PCBNEXTPCBINDEX)];
-			////TerminateProcess(ptr);
+			////TerminateProcess(ptr); Doesn't exist yet
 			ptr = (int)RQ;
 		 }
 
@@ -1982,7 +2010,7 @@ public class HYPOMachine
 		while(ptr != EOL)
 		{
 			WQ = MAINMEMORY[(int)(ptr+ PCBNEXTPCBINDEX)];
-			////TerminateProcess(ptr);
+			////TerminateProcess(ptr); Doesn't exist yet
 			ptr = (int)WQ;
 		}
 		return;
