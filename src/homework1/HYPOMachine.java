@@ -2,7 +2,7 @@
  * Author Name:	Jonathon Ku and Gabe and India
  * Student ID:	300994041
  * Class:		CSCI465
- * Assignment:	Homework 1
+ * Assignment:	Homework
  * Date:		2/8/2019
  * Description:	This program simulates the operation of a CPU within the main method. 
  * 				It first utilizes the InitializeSystem method to set all simulated 
@@ -20,7 +20,6 @@
  * 				formatted output of global variables, and a range of memory which can
  * 				be specified by the programmer. 
  */
-package homework1;
 
 /*
  * Change Log:
@@ -65,10 +64,15 @@ public class HYPOMachine
 	final private static long PCBNEXTPCBINDEX = 0;				//Index of Next PCB Address in a PCB
 	final private static long PCBPIDINDEX = 1;					//Index of PID in a PCB
 	final private static long PCBSTATEINDEX = 2;				//Index of State in PCB
-	final private static long PCBPRIORITYINDEX = 4;				//Index of Priority in PCB
+	final private static long PCBPRIORITYINDEX = 4;	
+	final private static long PCBGPR0 = 11;			//Index of Priority in PCB
 	final private static long READYSTATE = 1; 					//Value to indicate Ready State of a PCB
 	final private static long RUNNINGSTATE = 2;					//Value to indicate Running State of a PCB
 	final private static long WAITINGSTATE = 3;					//Value to indicate Waiting State of a PCB
+	final private static long DEFAULTPRIORITY = 128;			//Default Priority of Program
+	final private static long OSMode = 16;
+	final private static long UserMode = 17;
+
 	
 	private static long CLOCK;									//Keeps track of how long it has taken for execution
 	private static long MAR;									//Contains the current address of instruction in main memory
@@ -81,7 +85,8 @@ public class HYPOMachine
 	private static long WQ = EOL;								//Pointer to the head of the Wait Queue
 	private static long UserFreeList = EOL;						//Pointer to the head of User Free Memory List
 	private static long OSFreeList = EOL;						//Pointer to the head of OS Free Memory List
-	private static long PID;									//Keeps track of next Process ID is available.
+	private static long PID;		
+						//Keeps track of next Process ID is available.
 	
 	/*****************************************************************************
 	 * Error Codes
@@ -119,6 +124,7 @@ public class HYPOMachine
 	final static private long NoFreeMemoryError = -13;
 	final static private long InvalidMemorySizeError = -14;
 	final static private long InvalidPIDError = -15;
+	final static private long InvalidSystemCallID = -16;
 	
 	/*****************************************************************************
 	 * Function: InitializeSystem
@@ -1826,6 +1832,386 @@ public class HYPOMachine
 		);
 		return GPRS[0];
 	}	
+
+	/*
+	// Function: 
+	// InitilizePCB
+	// 
+	// Task description:
+	// Initialize PCB and next 21 values to 0 to allocate space for it
+	// Set PID, default priority, and state to ready
+	// 
+	// Input:
+	// PCBPtr 
+	// 
+	// Function Return Value:
+	// None
+	// 
+	// Author:
+	// Gabe Freitas
+	*/
+	private static void InitializePCB(long PCBPtr)
+	{
+		//Iterate through PCB array to make values equal to 0
+		for(int pcbIndex = 1; pcbIndex <= 21; pcbIndex++)
+		{
+			MAINMEMORY[(int)(PCBPtr + pcbIndex)] = 0;
+		}
+
+		//Set defaults of PCB 
+		MAINMEMORY[(int)(PCBPtr + PCBPIDINDEX)] = PID++;
+		MAINMEMORY[(int)(PCBPtr + PCBPRIORITYINDEX)] = DEFAULTPRIORITY;
+		MAINMEMORY[(int)(PCBPtr + PCBSTATEINDEX)] = READYSTATE; 
+		MAINMEMORY[(int)(PCBPtr + PCBNEXTPCBINDEX)] = EOL;
+
+		return;
+	}
+
+	
+	/*
+	// Function: 
+	// CheckAndProcessInterrupt
+	// 
+	// Task description:
+	// Prompt user to enter a interrupt ID and enter the appropriate method
+	// if invalid input, tell user
+	// 
+	// Input:
+	// None 
+	// 
+	// Return Value:
+	// None
+	// 
+	// Author:
+	// Gabe Freitas
+	*/
+
+	private static void CheckAndProcessInterrupt()
+	{
+		Scanner userIn = new Scanner(System.in);
+
+
+		//Print out the possible inputs allowed by user and what they do
+		System.out.println("Please enter the interrupt ID: ");
+		System.out.println("Possible interrupt IDs:");
+		System.out.println("0 - no interrupt");
+		System.out.println("1 - run program");
+		System.out.println("2 - shutdown system");
+		System.out.println("3 - input operation completion");
+		System.out.println("4 - Output operation complete");
+		int interruptID = userIn.nextInt();
+		System.out.println("Interrupt ID inputted: " + interruptID);
+
+		//Switch case to handle user input 
+		switch(interruptID)
+		{
+			case 0:
+				break;
+
+			case 1:
+				ISRRunProgramInterrupt();
+				break;
+
+ 			case 2:
+				ISRShutdownSystem();
+				break;
+
+ 			case 3: 
+				ISRInputCompletionInterrupt();
+				break;
+
+ 			case 4:
+				ISROutputCompletionInterrupt();
+				break;
+
+ 			default:
+				System.out.println("Invalid interrupt ID");
+				break;
+		}//end of InterruptIDSwitch
+		return;
+	}//End of CheckAndProcessInterrupt() function
+
+	/*
+	// Function: 
+	// ISRRunProgramInterrupt
+	// 
+	// Task description:
+	// Prompt and create process based on user input
+	// 
+	// Input:
+	// None 
+	// 
+	// Return Value:
+	// None
+	// 
+	// Author:
+	// Gabe Freitas
+	*/
+	static void ISRRunProgramInterrupt()
+	{
+		Scanner userIn = new Scanner(System.in);
+		System.out.println("Please enter the filename: ");
+		String fileName = userIn.nextLine();
+
+ 		//CreateProcess(fileName, DEFAULTPRIORITY); Delete this later when this exists
+		return;
+	}
+
+	/*
+	// Function: 
+	// ISRInputCompletionInterrupt
+	// 
+	// Task description:
+	// Prompt user for the PID of the process, search WQ and RQ for process 
+	// Remove from WQ and insert into RQ if it is in RQ
+	// Prompt user for a character and print it
+	// 
+	// Input:
+	// None 
+	// 
+	// Return Value:
+	// None
+	// 
+	// Author:
+	// Gabe Freitas
+	*/
+ 	static void ISRInputCompletionInterrupt()
+	{
+		
+		Scanner userIn = new Scanner(System.in);
+		System.out.println("Please enter the PID of the process:");
+		long desiredPID = userIn.nextInt();
+		long prevPCB = EOL; //
+		long rqPCB = RQ; //Start at head of RQ
+		long wqPCB = WQ; //start at head of WQ
+
+		//if  wqPCB == EOL, move into checking through RQ
+		//iterate through WQ
+		while(wqPCB != EOL) 
+		{
+			if(MAINMEMORY[(int)(wqPCB + PCBPIDINDEX)] == desiredPID)
+			{
+				//If condition is met, remove PID from WQ, store character into PCB GPR 0, and add PCB to RQ
+				SearchAndRemovePCBFromWQ(desiredPID);
+				System.out.println("Please enter a character (A-Z): ");
+				char userChar = userIn.next().charAt(0);
+				MAINMEMORY[(int)(desiredPID + PCBGPR0)] = userChar;
+				MAINMEMORY[(int)(desiredPID + PCBSTATEINDEX)] = READYSTATE;
+				InsertIntoRQ(desiredPID);
+				return;
+			}
+
+			prevPCB = desiredPID;
+			wqPCB = MAINMEMORY[(int)(wqPCB + PCBNEXTPCBINDEX)]; //Iterate through WQ
+		}
+
+
+		//Search through RQ until EOL is reached
+		while(rqPCB != EOL)
+		{
+			//If PID is found in RQ, store entered character in gpr 0
+			if(MAINMEMORY[(int)(rqPCB + PCBPIDINDEX)] == desiredPID)
+			{
+				System.out.println("Please enter a character (A-Z): ");
+				char userChar = userIn.next().charAt(0);
+				MAINMEMORY[(int)(desiredPID + PCBGPR0)] = userChar;
+			}
+
+			//Store previous PCB 
+			prevPCB = desiredPID;
+			//Continue to iterate through RQ
+			rqPCB = MAINMEMORY[(int)(rqPCB + PCBNEXTPCBINDEX)];
+		}
+
+		//Inform user PID is invalid
+		System.out.println("Invalid PID: " + desiredPID +  ", please enter valid PID");
+		return;
+	 } //End of ISRinputCompletionInterrupt() function
+	 
+	 
+	/*
+	// Function: 
+	// ISROutputCompletionInterrupt
+	// 
+	// Task description:
+	// Prompt user for the PID of the process, search WQ and RQ for process 
+	// Remove from WQ and insert into RQ if it is in RQ
+	// Print character in GPR0
+	// 
+	// Input:
+	// None 
+	// 
+	// Return Value:
+	// None
+	// 
+	// Author:
+	// Gabe Freitas
+	*/
+	 static void ISROutputCompletionInterrupt()
+	{
+		Scanner userIn = new Scanner(System.in);
+		System.out.println("Please enter the PID: ");
+		long desiredPID = userIn.nextInt();
+		long prevPCB = EOL;
+		long wqPCB = WQ; //start at head of WQ
+		long rqPCB = RQ; //start at head of RQ
+
+		//if  wqPCB == EOL, move into checking through RQ
+		//iterate through WQ
+		while(wqPCB != EOL) 
+		{
+			if(MAINMEMORY[(int)(wqPCB + PCBPIDINDEX)] == desiredPID)
+			{
+				//Remove PCB from WQ and print character in PCB GPR 0
+				SearchAndRemovePCBFromWQ(desiredPID);
+				System.out.println(MAINMEMORY[(int)(wqPCB + PCBGPR0)]);
+				MAINMEMORY[(int)(wqPCB + PCBSTATEINDEX)] = READYSTATE;
+				InsertIntoRQ(wqPCB); //Insert PCB into RQ
+				return;
+			}
+			prevPCB = wqPCB;
+			//Iterate through WQ
+			wqPCB = MAINMEMORY[(int)(wqPCB + PCBNEXTPCBINDEX)];
+		}
+
+		//Search RQ for desiredPID
+		while(rqPCB != EOL)
+		{
+			if(MAINMEMORY[(int)(rqPCB + PCBPIDINDEX)] == desiredPID)
+			{
+				//Print whatever is in PCB GPR0
+				System.out.println(MAINMEMORY[(int)(rqPCB + PCBGPR0)]);
+				return;
+			}
+
+			prevPCB = rqPCB;
+			//Iterate through RQPCB
+			rqPCB = MAINMEMORY[(int)(rqPCB + PCBNEXTPCBINDEX)];
+		}
+
+		//Inform user inputted PID is invalid
+		System.out.println("Invalid PID: " + desiredPID +  ", please enter valid PID");
+		return;
+	}  // end of ISROutputCompletionInterrupt() function
+
+	/*
+	// Function: 
+	// ISRShutdownSystem
+	// 
+	// Task description:
+	// Terminate processes in both RQ and WQ by iterating through them
+	// 
+	// Input:
+	// None 
+	// 
+	// Return Value:
+	// None
+	// 
+	// Author:
+	// Gabe Freitas
+	*/
+	static void ISRShutdownSystem()
+	{
+		 int ptr = (int)RQ;
+
+		 //Iterate through RQ looking for next process to terminate
+		 while(ptr != EOL)
+		 {
+			RQ = MAINMEMORY[(int)(ptr + PCBNEXTPCBINDEX)];
+			//Set RQ to next process in RQ
+			//Terminate process using rq ptr
+			////TerminateProcess(ptr); Doesn't exist yet
+			//Set ptr to next value in RQ
+			ptr = (int)RQ;
+		 }
+
+		ptr = (int)WQ;
+
+		//Iterate through RQ
+		while(ptr != EOL)
+		{
+			WQ = MAINMEMORY[(int)(ptr+ PCBNEXTPCBINDEX)];
+			//Set WQ to next process in RQ
+			//Terminate process using wq ptr
+			////TerminateProcess(ptr); Doesn't exist yet
+			//Set ptr to next value in WQ
+			ptr = (int)WQ;
+		}
+		return;
+	} // end of ISRShutdownSystem() function
+
+	/*
+	// Function: 
+	// SystemCall
+	// 
+	// Task description:
+	// Have PSR enter OSMode and enter appropriate case for SysCallID handling
+	// 
+	// Input:
+	// Long SystemCallID - SysCallID passed to OS 
+	// 
+	// Return Value:
+	// Status - Status telling if operation was successful
+	// 
+	// Author:
+	// Gabe Freitas
+	*/
+	static long SystemCall(long SystemCallID)
+	{
+		//Enter OsMode
+		PSR = OSMode;
+
+		//Default to OK status
+		long status = Success;
+
+		//Switch for handling SysCallId
+		switch((int)SystemCallID)
+		{
+			case 1:
+				System.out.println("Create process system call not implemented");
+				break;
+			case 2:
+				System.out.println("Delete process system call not implemented");
+				break;
+			case 3:
+				System.out.println("Process inquiry system call not implemented");
+				break;
+			case 4:
+				status = MemAllocSystemCall();
+				break;
+			case 5:
+				status = MemFreeSystemCall();
+				break;
+			case 6:
+				System.out.println("Message send system call not implemented");
+				break;
+			case 7:
+				System.out.println("Message receive system call not implemented");
+				break;
+			case 8:
+				//status = io_getcSystemCall(); Uncomment when ready
+				break;
+			case 9:
+				//status = io_putcSystemCall(); Uncomment when ready
+				break;
+			case 10:
+				System.out.println("Time get system call not implemented");
+				break;
+			case 11:
+				System.out.println("Time set system call not implemented");
+				break;
+			default:
+				System.out.println("Invalid system call ID"); //User entered invalid SysCall
+				status = InvalidSystemCallID; //Return error code
+				break;
+		}
+		//Return Os back to user
+		PSR = UserMode;
+		return status;
+	} //End of SystemCall() Function
+
+
+
 	
 	/*****************************************************************************
 	 * Function: Main
