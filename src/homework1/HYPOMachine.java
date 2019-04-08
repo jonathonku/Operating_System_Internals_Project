@@ -70,6 +70,8 @@ public class HYPOMachine
 	final private static long RUNNINGSTATE = 2;					//Value to indicate Running State of a PCB
 	final private static long WAITINGSTATE = 3;					//Value to indicate Waiting State of a PCB
 	final private static long DEFAULTPRIORITY = 128;			//Default Priority of Program
+	final private static long OSMode = 16;
+	final private static long UserMode = 17;
 
 	
 	private static long CLOCK;									//Keeps track of how long it has taken for execution
@@ -83,7 +85,8 @@ public class HYPOMachine
 	private static long WQ = EOL;								//Pointer to the head of the Wait Queue
 	private static long UserFreeList = EOL;						//Pointer to the head of User Free Memory List
 	private static long OSFreeList = EOL;						//Pointer to the head of OS Free Memory List
-	private static long PID;									//Keeps track of next Process ID is available.
+	private static long PID;		
+						//Keeps track of next Process ID is available.
 	
 	/*****************************************************************************
 	 * Error Codes
@@ -121,6 +124,7 @@ public class HYPOMachine
 	final static private long NoFreeMemoryError = -13;
 	final static private long InvalidMemorySizeError = -14;
 	final static private long InvalidPIDError = -15;
+	final static private long InvalidSystemCallID = -16;
 	
 	/*****************************************************************************
 	 * Function: InitializeSystem
@@ -2135,6 +2139,76 @@ public class HYPOMachine
 		}
 		return;
 	} // end of ISRShutdownSystem() function
+
+	/*
+	// Function: 
+	// SystemCall
+	// 
+	// Task description:
+	// Have PSR enter OSMode and enter appropriate case for SysCallID handling
+	// 
+	// Input:
+	// Long SystemCallID - SysCallID passed to OS 
+	// 
+	// Return Value:
+	// Status - Status telling if operation was successful
+	// 
+	// Author:
+	// Gabe Freitas
+	*/
+	static long SystemCall(long SystemCallID)
+	{
+		//Enter OsMode
+		PSR = OSMode;
+
+		//Default to OK status
+		long status = Success;
+
+		//Switch for handling SysCallId
+		switch(SystemCallID)
+		{
+			case 1:
+				System.out.println("Create process system call not implemented");
+				break;
+			case 2:
+				System.out.println("Delete process system call not implemented");
+				break;
+			case 3:
+				System.out.println("Process inquiry system call not implemented");
+				break;
+			case 4:
+				status = MemAllocSystemCall();
+				break;
+			case 5:
+				status = MemFreeSystemCall();
+				break;
+			case 6:
+				System.out.println("Message send system call not implemented");
+				break;
+			case 7:
+				System.out.println("Message receive system call not implemented");
+				break;
+			case 8:
+				//status = io_getcSystemCall(); Uncomment when ready
+				break;
+			case 9:
+				//status = io_putcSystemCall(); Uncomment when ready
+				break;
+			case 10:
+				System.out.println("Time get system call not implemented");
+				break;
+			case 11:
+				System.out.println("Time set system call not implemented");
+				break;
+			default:
+				System.out.println("Invalid system call ID"); //User entered invalid SysCall
+				status = InvalidSystemCallID; //Return error code
+				break;
+		}
+		//Return Os back to user
+		PSR = UserMode;
+		return status;
+	} //End of SystemCall() Function
 
 
 
