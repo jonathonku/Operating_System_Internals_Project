@@ -21,6 +21,7 @@
  * 				be specified by the programmer. 
  */
 
+
 /*
  * Change Log:
  * 
@@ -46,6 +47,7 @@
 //import java.util.LinkedList;
 import java.util.Scanner;
 import java.io.*;
+
 
 
 public class HYPOMachine 
@@ -557,6 +559,7 @@ public class HYPOMachine
 		long op1GPR;		//Store Operand 1 GPR of instruction in op1GPR
 		long op2Mode;		//Store Operand 2 Mode of instruction in op2Mode
 		long op2GPR;		//Store Operand 2 GPR of instruction in op2GPR
+		long timeLeft = TIMESLICE; //Timeslice is a constant of 200 clock ticks
 		
 		long systemCallID;	//Used for OpCode 12, System Call. Not used for anything yet. 
 		long result = 0;	//Stores result of arithmetic operations
@@ -620,6 +623,7 @@ public class HYPOMachine
 					case 0: //Halt
 						System.out.println("Halt Encountered");
 						CLOCK+=12;
+						timeLeft -= 12;
 						break;
 					case 1:	//Add
 						/* Fetch both operands from their appropriate locations using FetchOperand
@@ -660,6 +664,7 @@ public class HYPOMachine
 							}
 						}
 						CLOCK +=3;
+						timeLeft -=3;
 						break;
 					case 2: //Subtract
 						/* Fetch both operands from their appropriate locations using FetchOperand
@@ -700,6 +705,7 @@ public class HYPOMachine
 							}
 						}
 						CLOCK +=3;
+						timeLeft -=3;
 						break;
 					case 3: //Multiply
 						/* Fetch both operands from their appropriate locations using FetchOperand
@@ -740,6 +746,7 @@ public class HYPOMachine
 							}
 						}
 						CLOCK +=6;
+						timeLeft -=6;
 						break;
 					case 4:	//Divide
 						/* Fetch both operands from their appropriate locations using FetchOperand
@@ -785,6 +792,7 @@ public class HYPOMachine
 							}
 						}
 						CLOCK +=6;
+						timeLeft -=6;
 						break;
 					case 5:	//Move
 						/* Fetch both operands from their appropriate locations using FetchOperand
@@ -823,6 +831,7 @@ public class HYPOMachine
 							}
 						}
 						CLOCK +=2;
+						timeLeft -=2;
 						break;
 					case 6: //Branch or Jump instruction
 						/* If PC address currently contained in PC is a valid PC address, set PC
@@ -840,6 +849,7 @@ public class HYPOMachine
 							status =  InvalidPCValueError;
 						}
 						CLOCK +=2;
+						timeLeft -=2;
 						break;
 					case 7: //Branch on Minus
 						/* Fetch operand1 check if no error occurred while fetching operand. Compare
@@ -873,6 +883,7 @@ public class HYPOMachine
 							}
 						}
 						CLOCK +=4;
+						timeLeft -=4;
 						break;
 					case 8:	//Branch on Plus
 						/* Fetch operand1 check if no error occurred while fetching operand. Compare
@@ -906,6 +917,7 @@ public class HYPOMachine
 							}
 						}
 						CLOCK +=4;
+						timeLeft -=4;
 						break;
 					case 9:	//Branch on zero
 						/* Fetch operand1 check if no error occurred while fetching operand. Compare
@@ -939,6 +951,7 @@ public class HYPOMachine
 							}
 						}
 						CLOCK +=4;
+						timeLeft -=4;
 						break;
 					case 10: //Push
 						/* Fetch operand 1. Check if no error occurred while fetching 
@@ -965,6 +978,7 @@ public class HYPOMachine
 							}
 						}
 						CLOCK +=2;
+						timeLeft -=2;
 						break;
 					case 11: //Pop
 						/* Fetch operand 1. Check if no error occurred while fetching 
@@ -1003,6 +1017,7 @@ public class HYPOMachine
 							}
 						}
 						CLOCK +=2;
+						timeLeft -=2;
 						break;
 					case 12: //System Call
 						/* If PC address currently contained in PC is a valid PC address, set PC
@@ -1010,11 +1025,16 @@ public class HYPOMachine
 						 * Otherwise, display an invalid PC error message and status =  the appropriate
 						 * error code.
 						 */
+
+						 status = FetchOperand(op1Mode, op1GPR);
+						 if(status < 0)
+						{
+							return(status);
+						}
 						if(PC >= 0 && PC < 10000)
 						{
 							systemCallID = MAINMEMORY[(int)PC++];
-							//status = SystemCall(op1.getValue());
-							//This method does not yet do anything of substance.
+							status = SystemCall(op1.getValue());
 						}
 						else
 						{
@@ -1022,6 +1042,7 @@ public class HYPOMachine
 							status =  InvalidPCValueError;
 						}
 						CLOCK +=12;
+						timeLeft -=12;
 						break;
 					default:	//Invalid Opcode
 						System.out.println("Invalid OpCode. OpCode must be between 0-12");
@@ -1031,7 +1052,7 @@ public class HYPOMachine
 				//System.out.println("Instruction: " + opCode + " " + op1Mode + op1GPR + " " + op2Mode + op2GPR + ". Clock: " + CLOCK);
 			}
 				
-		}while(MBR != 0 && status == 0);
+		}while(MBR != 0 && status == 0 && timeLeft > 0);
 		return status;
 	}
 	
