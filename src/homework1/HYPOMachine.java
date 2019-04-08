@@ -2165,7 +2165,7 @@ public class HYPOMachine
 		long status = Success;
 
 		//Switch for handling SysCallId
-		switch(SystemCallID)
+		switch((int)SystemCallID)
 		{
 			case 1:
 				System.out.println("Create process system call not implemented");
