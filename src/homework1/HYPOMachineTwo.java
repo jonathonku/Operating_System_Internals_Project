@@ -127,129 +127,6 @@ public class HYPOMachine
 	final static private long InvalidMemorySizeError = -14;
 	final static private long InvalidPIDError = -15;
 	
-	/******************************************************************************
-	 * Function: CreateProcess
-	 * 
-	 * Task Description:
-	 * 		Create a process needed for the MTOPS to use
-	 * 
-	 * Input Parameters:
-	 * 		None
-	 * 
-	 * Output Parameters:
-	 * 		None
-	 * 
-	 * Author: India Ervin
-	 * Change Log:
-	 * 		Started this code on 3/25/2018, accidently deleted it on 4/7/2018.
-	 * 		Rewrote it from memory and previous save but still isn't the same as it 
-	 * 		once was.  
-	 * 
-	 * 
-	 * 
-	 * 
-	 ******************************************************************************/
-	public long CreateProcess(char filename, long priorityIndex)
-	{
-		this.filename = filename;
-		this.priorityIndex = priorityIndex;
-		long PCBptr;
-		
-		public char getFileName() 
-		{
-			return filename;
-		}
-		
-		public long getPriorityIndex()
-		{
-			return priorityIndex;
-		}
-		
-		public long setPriorityIndex(long priorityIndex)
-		{
-			if (priorityIndex != EOL)
-			{
-				return this.priorityIndex;
-			}
-			return priorityIndex;
-		}
-
-		// Allocate space for Process Control Block
-	      if (PCBptr == 0 || PCBptr == MAXOFADDRESS) 
-	      {
-	    	  System.out.println("Invalid address error. Address must be within respective block: User Programs 0-2999, User Memory 3000-6999, OS Memory 7000-9999");
-	    	  return AddressInvalidError;
-	      }
-	      
-	      else 
-	      {
-	    	  PBPptr = GSPR[i];
-	      }
-	
-
-	      // Initialize PCB: Set nextPCBlink to end of list, default priority, Ready state, and PID
-	      long nextPCBlink = EOL;
-	      
-	      
-	 
-	      // Load the program
-	     value = PCBPIDINDEX;
-
-	      // store PC value in the PCB of the process
-	     PCBptr = new AbsouluteLoader(value);
-
-	      // Allocate stack space from user free list
-	       if (PCBptr < 0)	// check for error
-	      {  // User memory allocation failed
-	    	   return (-13);
-	      }
-
-	      // Store stack information in the PCB ï¿½ SP, ptr, and size
-	      /*Set SP in the PCB = ptr + Stack Size;  // empty stack is high address, full is low address
-	      * Set stack start address in the PCB to ptr;
-	      * Set stack size in the PCB = Stack Size;
-	      */
-	      for (int i = 0, i < MAINMEMORY.length, i++)
-	      {
-	    	  if (SP <= MAINMEMORY[i])
-	    	  {
-	    		  return (-13)
-	    	  }
-	    	  
-	    	  else
-	    	  {
-	    		  return SP;
-	    	  }
-	      }
-	      
-	      for (int i = 0 , i < GSPR.length, i++ )
-	      {
-	    	  if (priorityIndex <= GSPR[i])
-	    	  {
-	    		  return(-13);
-	    	  }
-	    	  
-	    	  else()
-	    	  {
-	    		  return priorityIndex;
-	    	  }
-	    		  
-	      }
-	      
-	      //Set priority in the PCB = priority;	// Set priority
-
-	     //Dump program area;
-
-	     //Print PCB passing PCBptr; 
-	      System.out.print(PCBptr);
-	     
-	     // Insert PCB into Ready Queue according to the scheduling algorithm
-	     //Insert PCB into Ready Queue passing PCBptr;
-
-	     return Success;
-	}  // end of CreateProcess() function
-
-
 	/*****************************************************************************
 	 * Function: InitializeSystem
 	 * 
@@ -1848,3 +1725,70 @@ class Operand
 		return value;
 	}
 }
+public static int main()
+{
+	// Run until shutdown
+
+	Call Initialize System function;
+
+	while (not shutdown)
+	{
+		// Check and process interrupt
+		call Check and Process Interrupt function and store return status
+		if interrupt is shutdown, exit from main;
+
+		// Dump RQ and WQ
+		DumpRQ(“RQ: Before CPU scheduling\n”);
+		DumpWQ(“WQ: Before CPU scheduling\n”);
+		DumpMemory(“Dynamic Memory Area before CPU scheduling\n”);
+
+		// Select next process from RQ to give CPU
+		Running PCB ptr = Select Process From RQ ();  // call the function
+
+		// Perform restore context using Dispatcher
+		Call Dispatcher function with Running PCB ptr as argument;
+
+		Dump RQ(“RQ: After selecting process from RQ\n”);
+		Dump Running PCB and CPU Context passing  Running PCB ptr as argument;
+
+		// Execute instructions of the running process using the CPU
+		status = CPU Execute Program ();  // call the function
+
+		// Dump dynamic memory area
+		Dump dynamic memory calling Dump Memory function(“After execute program\n”);
+
+		// Check return status – reason for giving up CPU
+		if(status is Time slice Expired)
+		{
+			Save CPU Context of running process in its PCB;  // running process is losing CPU
+			Insert running process PCB into RQ;
+			Set Running PCB ptr = End Of List;
+		}
+		else if((status is Process Halted) OR (status < 0))  // Halt or run-time error
+		{
+			Terminate running Process;
+			Set Running PCB ptr = End Of List ;
+		}
+		else if(status is Start Of Input Operation)		// io_getc
+		{
+			Set reason for waiting in the running PCB to Input Completion Event;
+			Insert running process into WQ;
+			Set Running PCB ptr = End Of List;
+		}
+		else if(status == Start Of Output Operation)		// io_putc
+		{
+			Set reason for waiting in the running PCB to Input Completion Event;
+			Insert running process into WQ;
+			Set Running PCB ptr = End Of List;
+		}
+		else
+		{	// Unknown programming error
+			Display Unknown programming error message;
+		 }
+	}  // end of while not shutdown loop
+
+	Print OS is shutting down message;
+
+	Return(status);  // Terminate Operating System
+}  // end of main function
+ 
