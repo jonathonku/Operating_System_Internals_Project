@@ -1866,6 +1866,66 @@ public class HYPOMachine
 
 		return;
 	}
+	
+	/* Function: PrintPCB
+	 * 
+	 * Task Description:
+	 * 		printing out all the values in a PCB process
+	 * 
+	 * Input:
+	 * 		Process, PID, PCB indexes, state indexes
+	 * 
+	 * Output:
+	 * 		None
+	 * 
+	 * Author: India Ervin
+	 * 
+	 * 
+	 */
+	public void PrintPCB(long PCBptr)
+	{
+		/*Print the values of the following fields from PCB with a text before the value like below:
+		*	PCB address = 6000, Next PCB Ptr = 5000, PID = 2, State = 2, PC = 200, SP = 4000, 
+		*	Priority = 127, Stack info: start address = 3990, size = 10
+		*	GPRs = print 8 values of GPR 0 to GPR 7
+		*/
+		
+		/*
+		 * Use of a StringBuilder to account for the many values needed
+		 * to print the PCB
+		 */
+		StringBuilder pcbFormat = new StringBuilder("PCB Address = ");
+				pcbFormat.append(PCBPtr + ",");
+				pcbFormat.append("Next PCB Pointer = " + PCBNEXTPCBINDEX + ",");
+				pcbFormat.append("PID = " + PID + ",");
+				
+				/* Use of a switch-case block to account
+				 * for the 3 possible state of the PCB process
+				 */
+				switch(PCBSTATEINDEX)
+				{
+					case 0:
+						pcbFormat.append("State= " + READYSTATE + ",");
+						break;
+					
+					case 1:
+						pcbFormat.append("State= " + RUNNINGSTATE + ",");
+						break;
+						
+					case 2:
+						pcbFormat.append("State= " + WAITINGSTATE + ",");
+						break;
+				}
+				
+				pcbFormat.append("PC = "  + PC + ",");
+				pcbFormat.append("SP = " + SP);
+				pcbFormat.append("Priority = " + PCBPRIORITYINDEX + ",");
+				pcbFormat.append("Stack info: Start address = " + MINUSERMEMADDRESS + ",");
+				pcbFormat.append("Size = " + MAINMEMORY[(MAR)] + ",");
+				pcbFormat.append("GPRs = " + GPRS[i] + ",");
+				
+				System.out.print(pcbFormat.toString());
+	}  // end of PrintPCB() function
 
 	
 	/*
