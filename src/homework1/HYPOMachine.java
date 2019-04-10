@@ -1926,7 +1926,54 @@ public class HYPOMachine
 				
 				System.out.print(pcbFormat.toString());
 	}  // end of PrintPCB() function
+	
+	/* Function: 
+	 * 	Print Given Queue
+	 * 
+	 * Task: 
+	 * 	To print out any Queue in order to show any process
+	 * 	within it
+	 * 
+	 * Input Parameters:
+	 * 	PCBptr
+	 * 
+	 * Output Parameters:
+	 * 	None
+	 * 
+	 * Author: India Ervin (4/10)
+	 * 
+	 * 
+	 * 
+	 * 
+	 * 
+	 */
+	
+	public long PrintQueue(long Qptr)
+	{
+		// Walk thru the queue from the given pointer until end of list
+		// Print each PCB as you move from one PCB to the next
 
+		long currentPCBptr = Qptr;
+
+		if(currentPCBptr == EOL)
+		{
+			System.out.print("Pointer is at End of List");
+			return DestinatinoOperandError;
+		}
+
+		// Walk thru the queue
+		while(currentPCBptr != EOL)
+		{	
+			currentPCBptr = PCBptr;
+			System.out.print(currentPCBptr + PCBNEXTPCBINDEX);
+			//Print PCB passing currentPCBPtr;
+			//Set currentPCBPtr = next PCB pointer using currentPCBPtr;
+		}  // end of while loop
+
+		return Success;
+	}  // end of PrintQueue() function
+
+	
 	
 	/*
 	// Function: 
