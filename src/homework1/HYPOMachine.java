@@ -66,16 +66,28 @@ public class HYPOMachine
 	final private static long PCBNEXTPCBINDEX = 0;				//Index of Next PCB Address in a PCB
 	final private static long PCBPIDINDEX = 1;					//Index of PID in a PCB
 	final private static long PCBSTATEINDEX = 2;				//Index of State in PCB
-	final private static long PCBPRIORITYINDEX = 4;	
-	final private static long PCBGPR0 = 11;			//Index of Priority in PCB
+	final private static long PCBPRIORITYINDEX = 4;				//Index of Priority in PCB
+	final private static long PCBGPR0 = 10;						//Index of PCB GPR 0
+	final private static long PCBGPR1 = 11;						//Index of PCB GPR 1
+	final private static long PCBGPR2 = 12;						//Index of PCB GPR 2
+	final private static long PCBGPR3 = 13;						//Index of PCB GPR 3
+	final private static long PCBGPR4 = 14;						//Index of PCB GPR 4
+	final private static long PCBGPR5 = 15;						//Index of PCB GPR 5
+	final private static long PCBGPR6 = 16;						//Index of PCB GPR 6
+	final private static long PCBGPR7 = 18;						//Index of PCB GPR 7
+	final private static long PCBSPINDEX = 18;					//Index of PCB SP
+	final private static long PCBPCINDEX = 19;					//Index PCB PC
+	final private static long PCBSTACKSTARTINDEX = 5;			//Index of PCB stack start address
+	final private static long PCBSTACKSIZEINDEX = 6;			//Index of PCB stack size 
 	final private static long READYSTATE = 1; 					//Value to indicate Ready State of a PCB
 	final private static long RUNNINGSTATE = 2;					//Value to indicate Running State of a PCB
 	final private static long WAITINGSTATE = 3;					//Value to indicate Waiting State of a PCB
 	final private static long DEFAULTPRIORITY = 128;			//Default Priority of Program
 	final private static long OSMode = 16;
 	final private static long UserMode = 17;
+	final private static long STARTOFINPUTEVENT = 3;
+	final private static long STARTOFOUTPUTEVENT = 4;
 
-	
 	private static long CLOCK;									//Keeps track of how long it has taken for execution
 	private static long MAR;									//Contains the current address of instruction in main memory
 	private static long MBR;									//Contains the content of current address
@@ -1026,8 +1038,8 @@ public class HYPOMachine
 						 * error code.
 						 */
 
-						 status = FetchOperand(op1Mode, op1GPR);
-						 if(status < 0)
+						 op1 = FetchOperand(op1Mode, op1GPR);
+						 if(op1.getStatus() < 0)
 						{
 							return(status);
 						}
@@ -2231,8 +2243,57 @@ public class HYPOMachine
 		return status;
 	} //End of SystemCall() Function
 
+	/* Function: PrintPCB
+	 * 
+	 * Task Description:
+	 * 		printing out all the values in a PCB process
+	 * 
+	 * Input:
+	 * 		PCBptr: Address of PCB to be printed
+	 * 
+	 * Output:
+	 * 		None
+	 * 
+	 * Author: Gabe Freitas
+	 * 
+	 * 
+	 */
+	public void PrintPCB(long PCBptr)
+	{
+		/*Print the values of the following fields from PCB with a text before the value like below:
+		*	PCB address = 6000, Next PCB Ptr = 5000, PID = 2, State = 2, PC = 200, SP = 4000, 
+		*	Priority = 127, Stack info: start address = 3990, size = 10
+		*	GPRs = print 8 values of GPR 0 to GPR 7
+		*/
+		
+		/*
+		 * Use of a StringBuilder to account for the many values needed
+		 * to print the PCB
+		 */
+		StringBuilder pcbFormat = new StringBuilder("PCB Address: ");
+				pcbFormat.append(PCBptr + ", ");
+				pcbFormat.append("Next PCB Pointer: " + MAINMEMORY[(int)(PCBptr + PCBNEXTPCBINDEX)] + ", ");
+				pcbFormat.append("PID: " + MAINMEMORY[(int)(PCBptr + PCBPIDINDEX)]+ ", ");
+				pcbFormat.append("PC: "  + MAINMEMORY[(int)(PCBptr + PCBPCINDEX)] + ", ");
+				pcbFormat.append("SP: " + MAINMEMORY[(int)(PCBptr + PCBSPINDEX)]);
+				pcbFormat.append("Priority = " + MAINMEMORY[(int)(PCBptr + PCBPRIORITYINDEX)] + ", ");
+				pcbFormat.append("Stack info: Start address: " + MAINMEMORY[(int)(PCBptr + PCBSTACKSTARTINDEX)] + ", ");
+				pcbFormat.append("Size:  " + MAINMEMORY[(int)(PCBptr + PCBSTACKSIZEINDEX)] + ", ");
+				pcbFormat.append("GPRs: " + MAINMEMORY[(int)(PCBptr + PCBGPR0)] + ",");
+				pcbFormat.append(MAINMEMORY[(int)(PCBptr + PCBGPR0)] + ", "  + MAINMEMORY[(int)(PCBptr + PCBGPR1)] + ","  + MAINMEMORY[(int)(PCBptr + PCBGPR2)] + ","  + MAINMEMORY[(int)(PCBptr + PCBGPR3)] + ","  + MAINMEMORY[(int)(PCBptr + PCBGPR4)] + ","  + MAINMEMORY[(int)(PCBptr + PCBGPR5)] + ","  + MAINMEMORY[(int)(PCBptr + PCBGPR6)] + ","  + MAINMEMORY[(int)(PCBptr + PCBGPR7)] + ",");
+				
+				System.out.print(pcbFormat.toString());
+	}  // end of PrintPCB() function
 
+	public long io_getcSystemCall()
+	{
+		return STARTOFOUTPUTEVENT;
+	}
 
+	public long io_putcSystemCall()
+	{
+		return STARTOFINPUTEVENT;
+	}
 	
 	/*****************************************************************************
 	 * Function: Main
