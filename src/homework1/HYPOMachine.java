@@ -21,6 +21,7 @@
  * 				be specified by the programmer. 
  */
 
+package homework1;
 
 /*
  * Change Log:
@@ -63,18 +64,34 @@ public class HYPOMachine
 	final private static long MAXUSERMEMADDRESS = 6999;			//Maximum address for User Memory block of memory
 	final private static long MINOSMEMADDRESS = 7000;			//Minimum address for OS Memory block of memory
 	final private static long MAXOSMEMADDRESS = 9999;			//Maximum address for OS Memory block of memory
+	
 	final private static long PCBNEXTPCBINDEX = 0;				//Index of Next PCB Address in a PCB
 	final private static long PCBPIDINDEX = 1;					//Index of PID in a PCB
 	final private static long PCBSTATEINDEX = 2;				//Index of State in PCB
-	final private static long PCBPRIORITYINDEX = 4;	
-	final private static long PCBGPR0 = 11;			//Index of Priority in PCB
+	final private static long PCBPRIORITYINDEX = 4;				//Index of Priority in PCB
+	final private static long PCBSTACKSTARTINDEX = 5;			//Index of PCB stack start address
+	final private static long PCBSTACKSIZEINDEX = 6;			//Index of PCB stack size
+	final private static long PCBGPR0 = 10;						//Index of PCB GPR 0
+	final private static long PCBGPR1 = 11;						//Index of PCB GPR 1
+	final private static long PCBGPR2 = 12;						//Index of PCB GPR 2
+	final private static long PCBGPR3 = 13;						//Index of PCB GPR 3
+	final private static long PCBGPR4 = 14;						//Index of PCB GPR 4
+	final private static long PCBGPR5 = 15;						//Index of PCB GPR 5
+	final private static long PCBGPR6 = 16;						//Index of PCB GPR 6
+	final private static long PCBGPR7 = 17;						//Index of PCB GPR 7
+	final private static long PCBSPINDEX = 18;					//Index of PCB SP
+	final private static long PCBPCINDEX = 19;					//Index of PCB PC
+	final private static long PCBPSRINDEX = 20;					//Index of PCB PSR
+	
 	final private static long READYSTATE = 1; 					//Value to indicate Ready State of a PCB
 	final private static long RUNNINGSTATE = 2;					//Value to indicate Running State of a PCB
 	final private static long WAITINGSTATE = 3;					//Value to indicate Waiting State of a PCB
 	final private static long DEFAULTPRIORITY = 128;			//Default Priority of Program
-	final private static long OSMode = 16;
-	final private static long UserMode = 17;
-
+	final private static long OSMode = 16;						//Represents System in OS control
+	final private static long UserMode = 17;					//Represents System in User control
+	final private static long PCBSIZE = 20;						//Size of a PCB
+	final private static long PCBSTACKSIZE = 100;				//Size of stack allocated for PCB
+	
 	
 	private static long CLOCK;									//Keeps track of how long it has taken for execution
 	private static long MAR;									//Contains the current address of instruction in main memory
@@ -87,8 +104,7 @@ public class HYPOMachine
 	private static long WQ = EOL;								//Pointer to the head of the Wait Queue
 	private static long UserFreeList = EOL;						//Pointer to the head of User Free Memory List
 	private static long OSFreeList = EOL;						//Pointer to the head of OS Free Memory List
-	private static long PID;		
-						//Keeps track of next Process ID is available.
+	private static long PID;									//Keeps track of next Process ID is available.
 	
 	/*****************************************************************************
 	 * Error Codes
@@ -108,7 +124,8 @@ public class HYPOMachine
 	 * 		-13:	NoFreeMemoryError				No free memory to allocate from list.
 	 * 		-14:	InvalidMemorySizeError			Invalid Memory Size. Size must be greater than 0.
 	 * 		-15: 	InvalidPIDError					Invalid PID. Not found in queue.
-	 * 	
+	 * 		-16:	InvalidSystemCallID				Invalid System Call ID. Only implemented 1-9.
+	 * 
 	 *****************************************************************************/
 	final static private long Success = 0;
 	final static private long FileOpenError = -1;
@@ -1026,8 +1043,9 @@ public class HYPOMachine
 						 * error code.
 						 */
 
-						 status = FetchOperand(op1Mode, op1GPR);
-						 if(status < 0)
+						op1 = FetchOperand(op1Mode, op1GPR);
+						status = op1.getStatus();
+						if(status < 0)	
 						{
 							return(status);
 						}
@@ -1195,7 +1213,7 @@ public class HYPOMachine
 	 * 
 	 * Function Return Value
 	 * 		>0: 	Address of allocated block of OS memory
-	 *		-2:	AddressInvalidError		Invalid address error. Address must be within respective block: User Programs 0-2999, User Memory 3000-6999, OS Memory 7000-9999
+	 *		-2:		AddressInvalidError		Invalid address error. Address must be within respective block: User Programs 0-2999, User Memory 3000-6999, OS Memory 7000-9999
 	 * 	
 	 * Author: Jonathon Ku
 	 * Change Log:
@@ -1796,7 +1814,7 @@ public class HYPOMachine
 	}
 	
 	/*****************************************************************************
-	 * Function: MemFreeSystemCall
+	 * Function: CreateProcess
 	 * 
 	 * Task Description:
 	 * 		Returns dynamically allocated user memory to user free list. GPR 1 has
@@ -1818,42 +1836,86 @@ public class HYPOMachine
 	 * Change Log:
 	 * 		4/4/2019: Wrote MemFreeSystemCall method. Not yet tested.
 	 *****************************************************************************/
-	public static long MemFreeSystemCall() 
+	
+	//you put this method back where you found it or so help me. Also
+	//fix documentation for CreateProcess.
+	
+	/*****************************************************************************
+	 * Function: CreateProcess
+	 * 
+	 * Task Description:
+	 * 		Returns dynamically allocated user memory to user free list. GPR 1 has
+	 * 		memory addresses and GPR 2 has the memory size to be released.
+	 * 
+	 * Input Parameters:
+	 * 		None
+	 * 
+	 * Output Parameters:
+	 * 		None
+	 * 
+	 * Function Return Value 
+	 * 		>0:		Success								Address of allocated memory
+	 *		-2:		AddressInvalidError					Invalid address error. Address must be within respective block: User Programs 0-2999, User Memory 3000-6999, OS Memory 7000-9999		
+	 *		-13:	NoFreeMemoryError					No free memory to allocate from list			
+	 *		-14:	InvalidMemorySizeError				Invalid Memory Size. Size must be greater than 0
+	 * 
+	 * Author: Jonathon Ku
+	 * Change Log:
+	 * 		4/4/2019: Wrote MemFreeSystemCall method. Not yet tested.
+	 *****************************************************************************/
+	public static long CreateProcess(String filename, long priority) 
 	{
-		//Declare and initialize size to value in GPR 2
-		long size = GPRS[2];
-		/*
-		 * If size is greater than the maximum size allowed (the difference of the max
-		 * user address and the min user address), then the size is too large.
-		 * Otherwise, FreeUserMemory will also return an error if the size requested
-		 * is too large for any free block to accommodate. GPR 0 contains the return
-		 * status, set GPR 0 to InvalidMemorySizeError, if applicable, and return it.
-		 */
-		if(size > (MAXUSERMEMADDRESS - MINUSERMEMADDRESS))
+		//Allocate space for PCB
+		long PCBptr = AllocateOSMemory(PCBSIZE);
+		//Check for error, represented with value < 0. Return error code
+		if(PCBptr < 0) 
 		{
-			GPRS[0] = InvalidMemorySizeError;
-			return GPRS[0];
+			return PCBptr;
 		}
-		// If size is 1, change it to 2 because PCB requires a block for address and size
-		else if(size == 1)
-		{
-			size = 2;
-		}
-		/*
- 		 * Set GPR 1 to address allocated from User Free Block, by AllocateUserMemory
- 		 * method. If FreeUserMemory method returns an error code, notated by a
- 		 * negative number, set GPR 0 to that error code, otherwise, GPR 0 is OK status 0
-		 */
-		GPRS[0] = FreeUserMemory(GPRS[1] ,size);
 		
-		System.out.println("Memory Free System Call:" + 
-		"\nGPR0:\t" + GPRS[0] +
-		"\nGPR1:\t" + GPRS[1] +
-		"\nGPR2:\t" + GPRS[2]
-		);
-		return GPRS[0];
+		//Initialize PCB
+		InitializePCB(PCBptr);
+		
+		//Load program
+		long value = AbsoluteLoader(filename);
+		//Check for errors
+		if(value < 0) 
+		{
+			return value;
+		}
+		MAINMEMORY[(int)(PCBptr + PCBPCINDEX)] = value;	
+		
+		//Allocate stack space from UserFreeList
+		long ptr = AllocateUserMemory(PCBSTACKSIZE);
+		//Check for errors
+		if(ptr < 0)
+		{
+			//User memory allocation has failed, so we must free the allocated OS memory
+			FreeOSMemory(PCBptr, PCBSIZE);
+			return ptr;
+		}
+		
+		//Store stack information in PCB (SP, ptr, and size)
+		MAINMEMORY[(int)(PCBptr + PCBSPINDEX)] = ptr; //empty stack is low address, full is high address
+		MAINMEMORY[(int)(PCBptr + PCBSTACKSTARTINDEX)] = ptr;
+		MAINMEMORY[(int)(PCBptr + PCBSTACKSIZEINDEX)] = PCBSTACKSIZE;
+		
+		MAINMEMORY[(int)(PCBptr + PCBPRIORITYINDEX)] = priority;
+		
+		//Need to figure out how to dump specifically program area. Is it PC or SP?
+		DumpMemory("Dumping Process: " + MAINMEMORY[(int)(PCBptr + PCBPIDINDEX)], PCBptr, 0);
+		
+		//Print PCB
+		//PrintPCB(PCBptr);
+		
+		//Insert PCB into RQ. No need to check for errors as the address was given by 
+		//AllocateOSMemory method, so address will be valid.
+		long status = InsertIntoRQ(PCBptr);
+		
+		return(Success);
 	}	
 
+	
 	/*
 	// Function: 
 	// InitilizePCB
