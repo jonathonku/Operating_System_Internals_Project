@@ -203,7 +203,7 @@ public class HYPOMachine
 		//Still need to call create process passing NullProcessExecutableFile and priority zero as arguments (From PsuedoCode)
 		//This is a machine language code which is just a constant loop while there are no other processes to execute.
 	}
-	
+
 	/*****************************************************************************
 	 * Function: DumpMemory
 	 * 
@@ -563,6 +563,65 @@ public class HYPOMachine
 	 * 		value, causing the loop to end. The loop continues until an error occurs,
 	 * 		or a halt is reached by storing 0 in MBR. Then it returns the status.
 	 *****************************************************************************/	
+	/* Function: PrintPCB
+	 * 
+	 * Task Description:
+	 * 		printing out all the values in a PCB process
+	 * 
+	 * Input:
+	 * 		Process, PID, PCB indexes, state indexes
+	 * 
+	 * Output:
+	 * 		None
+	 * 
+	 * Author: India Ervin
+	 * 
+	 * 
+	 */
+	public void PrintPCB(long PCBptr)
+	{
+		/*Print the values of the following fields from PCB with a text before the value like below:
+		*	PCB address = 6000, Next PCB Ptr = 5000, PID = 2, State = 2, PC = 200, SP = 4000, 
+		*	Priority = 127, Stack info: start address = 3990, size = 10
+		*	GPRs = print 8 values of GPR 0 to GPR 7
+		*/
+		
+		/*
+		 * Use of a StringBuilder to account for the many values needed
+		 * to print the PCB
+		 */
+		StringBuilder pcbFormat = new StringBuilder("PCB Address = ");
+				pcbFormat.append(PCBPtr + ",");
+				pcbFormat.append("Next PCB Pointer = " + PCBNEXTPCBINDEX + ",");
+				pcbFormat.append("PID = " + PID + ",");
+				
+				/* Use of a switch-case block to account
+				 * for the 3 possible state of the PCB process
+				 */
+				switch(PCBSTATEINDEX)
+				{
+					case 0:
+						pcbFormat.append("State= " + READYSTATE + ",");
+						break;
+					
+					case 1:
+						pcbFormat.append("State= " + RUNNINGSTATE + ",");
+						break;
+						
+					case 2:
+						pcbFormat.append("State= " + WAITINGSTATE + ",");
+						break;
+				}
+				
+				pcbFormat.append("PC = "  + PC + ",");
+				pcbFormat.append("SP = " + SP);
+				pcbFormat.append("Priority = " + PCBPRIORITYINDEX + ",");
+				pcbFormat.append("Stack info: Start address = " + MINUSERMEMADDRESS + ",");
+				pcbFormat.append("Size = " + MAINMEMORY[(MAR)] + ",");
+				pcbFormat.append("GPRs = " + GPRS[i] + ",");
+				
+				System.out.print(pcbFormat.toString());
+	}
 	private static long ExecuteProgram()
 	{
 		//Local Variables
@@ -1434,6 +1493,131 @@ public class HYPOMachine
 		System.out.println("No free OS memory");
 		return NoFreeMemoryError;
 	}
+	/***************************************************************************
+	 * Function: SelectProcessFromRQ
+	 * 
+	 * 
+	 * Task:
+	 * 	need to take a process from Ready Queue and place in WQ or Running Queue
+	 * 
+	 * Input Parameters:
+	 *		None
+	 *
+	 * Output Parameters:
+	 * 		None
+	 * 
+	 * Author: India Ervin (4/11)
+	 **************************************************************************/
+	public static long SelectProcessFromRQ()
+	{
+		long PCBptr = RQ;  // first entry in RQ
+
+		if(RQ != EOL)
+		{
+		    // Remove first PCB from RQ
+		    RQ = PCBNEXTPCBINDEX;
+		}
+
+		// Set next point to EOL in the PCB
+	    PCBNEXTPCBINDEX = EOL;
+
+		return(PCBptr);
+	}  // end of SelectProcessFromRQ() function
+
+	/*******************************************************************
+	 *  Function: SaveContext
+	 * 
+	 * Task:
+	 * 		To save CPU whenever a process in runnin in oder to 
+	 * 		acess it at a later time
+	 * 
+	 * Input Parameters:
+	 * 		None
+	 * 
+	 * Output Parameters:
+	 * 		None
+	 * 
+	 * Author: India Ervin
+	 ***********************************************************************/ 
+	public static void SaveContext(long PCBptr)
+	{
+		// Assume PCBptr is a valid pointer.
+		long prevPtr = EOL;
+		long curPtr = RQ;
+		
+		//Copy all CPU GPRs into PCB using PCBptr with or without using loop
+		while(PCBptr != prevPtr && PCBptr != RQ) 
+		{
+			MAINMEMORY[(int)(PCBptr + PCBSTATEINDEX)] = SP;  	// Save SP
+			MAINMEMORY[(int)(PCBptr + PCBPCBINDEX)] = PC;	// Save PC
+		}
+	
+	
+		return;
+		
+	}
+	/*********************************************************************
+	 * Function: Dispatcher
+	 * 
+	 * Task:
+	 * 		To restore the CPU from the PCB
+	 * 
+	 * Input Parameter:
+	 * 		PCBptr
+	 * 
+	 * Output paramerter:
+	 * 		None
+	 * 
+	 * Author: India Ervin (4/11)
+	 * 
+	 * 
+	 * 
+	 ************************************************************************/
+	public void Dispatcher(long PCBptr)
+	{
+		// PCBptr is assumed to be correct.
+		
+		// Copy CPU GPR register values from given PCB into the CPU registers
+		// This is opposite of save CPU context
+		while (PCBptr == EOL)
+		{
+			SP = EOL;
+			PC = EOL;
+		}
+		// Restore SP and PC from given PCB
+
+		// Set system mode to User mode
+		long PSR = UserMode;	// UserMode is 2, OSMode is 1.
+
+		return;
+	}  // end of Dispatcher() function
+
+	/*****************************************************************************
+	 * Function: Teminate
+	 * 
+	 * Task:
+	 * 		to stop any process and restore resources to CPU
+	 * 
+	 * Input Paramaters:
+	 * 		None
+	 * 
+	 * Output Parameters:
+	 * 		None
+	 * 
+	 * Author: India Ervin (4/11)
+	 * 
+	 *****************************************************************************/
+	public void TerminateProcess (long PCBptr)
+	{
+		// Return stack memory using stack start address and stack size in the given PCB
+		MAINMEMORY[int(PCBSTACKSTARTINDEX + PCBSTACKSTATEINDEX)] = EOL;
+		
+		// Return PCB memory using the PCBptr
+		MAINMEMORY[int(PCBptr)] = EOL;
+		
+		return;
+	}  // end of TerminateProcess function()
+
 	
 	/*****************************************************************************
 	 * Function: FreeOSMemory
