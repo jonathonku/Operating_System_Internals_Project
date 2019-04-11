@@ -87,8 +87,8 @@ public class HYPOMachine
 	final private static long RUNNINGSTATE = 2;					//Value to indicate Running State of a PCB
 	final private static long WAITINGSTATE = 3;					//Value to indicate Waiting State of a PCB
 	final private static long DEFAULTPRIORITY = 128;			//Default Priority of Program
-	final private static long OSMode = 16;						//Represents System in OS control
-	final private static long UserMode = 17;					//Represents System in User control
+	final private static long OSMode = 1;						//Represents System in OS control
+	final private static long UserMode = 2;						//Represents System in User control
 	final private static long PCBSIZE = 20;						//Size of a PCB
 	final private static long PCBSTACKSIZE = 100;				//Size of stack allocated for PCB
 	
@@ -1458,8 +1458,8 @@ public class HYPOMachine
 	 * 		None
 	 * 
 	 * Function Return Value
-	 * 		 0:		Success							Successful Completion
-	 * 		-2:		AddressInvalidError				Invalid address error. Address must be within respective block: User Programs 0-2999, User Memory 3000-6999, OS Memory 7000-9999
+	 * 		 0:		Success								Successful Completion
+	 * 		-2:		AddressInvalidError					Invalid address error. Address must be within respective block: User Programs 0-2999, User Memory 3000-6999, OS Memory 7000-9999
 	 * 		-13:	NoFreeMemoryError					No free memory to allocate from list
 	 * 		-14:	InvalidMemorySizeError				Invalid Memory Size. Size must be greater than 0.
 	 * 			
@@ -1814,7 +1814,7 @@ public class HYPOMachine
 	}
 	
 	/*****************************************************************************
-	 * Function: CreateProcess
+	 * Function: MemFreeSystemCall
 	 * 
 	 * Task Description:
 	 * 		Returns dynamically allocated user memory to user free list. GPR 1 has
@@ -1835,33 +1835,71 @@ public class HYPOMachine
 	 * Author: Jonathon Ku
 	 * Change Log:
 	 * 		4/4/2019: Wrote MemFreeSystemCall method. Not yet tested.
-	 *****************************************************************************/
-	
-	//you put this method back where you found it or so help me. Also
-	//fix documentation for CreateProcess.
-	
+	 *****************************************************************************/	
+	public static long MemFreeSystemCall() 
+	{
+		//Declare and initialize size to value in GPR 2
+		long size = GPRS[2];
+		/*
+		 * If size is greater than the maximum size allowed (the difference of the max
+		 * user address and the min user address), then the size is too large.
+		 * Otherwise, FreeUserMemory will also return an error if the size requested
+		 * is too large for any free block to accommodate. GPR 0 contains the return
+		 * status, set GPR 0 to InvalidMemorySizeError, if applicable, and return it.
+		 */
+		if(size > (MAXUSERMEMADDRESS - MINUSERMEMADDRESS))
+		{
+			GPRS[0] = InvalidMemorySizeError;
+			return GPRS[0];
+		}
+		// If size is 1, change it to 2 because PCB requires a block for address and size
+		else if(size == 1)
+		{
+			size = 2;
+		}
+		/*
+ 		 * Set GPR 1 to address allocated from User Free Block, by AllocateUserMemory
+ 		 * method. If FreeUserMemory method returns an error code, notated by a
+ 		 * negative number, set GPR 0 to that error code, otherwise, GPR 0 is OK status 0
+		 */
+		GPRS[0] = FreeUserMemory(GPRS[1] ,size);
+		
+		System.out.println("Memory Free System Call:" + 
+		"\nGPR0:\t" + GPRS[0] +
+		"\nGPR1:\t" + GPRS[1] +
+		"\nGPR2:\t" + GPRS[2]
+		);
+		return GPRS[0];
+	}	
+
 	/*****************************************************************************
 	 * Function: CreateProcess
 	 * 
 	 * Task Description:
-	 * 		Returns dynamically allocated user memory to user free list. GPR 1 has
-	 * 		memory addresses and GPR 2 has the memory size to be released.
+	 * 		Takes the filename of a program, allocates OS memory for a PCB, allocates
+	 * 		User memory for program space. Initializes its PCB and gives it the parameter
+	 * 		priority. It produces a MemoryDump for the Process created and then inserts
+	 * 		it into Ready Queue.
 	 * 
 	 * Input Parameters:
-	 * 		None
+	 * 		filename			Filename of program we will load into main memory
+	 * 		priority			Priority we wish to apply to the PCB
 	 * 
 	 * Output Parameters:
 	 * 		None
 	 * 
 	 * Function Return Value 
-	 * 		>0:		Success								Address of allocated memory
-	 *		-2:		AddressInvalidError					Invalid address error. Address must be within respective block: User Programs 0-2999, User Memory 3000-6999, OS Memory 7000-9999		
-	 *		-13:	NoFreeMemoryError					No free memory to allocate from list			
-	 *		-14:	InvalidMemorySizeError				Invalid Memory Size. Size must be greater than 0
+	 * 			>0: 	Success	
+	 * 			-1:		FileOpenError					Unable to open the file
+	 *			-2:		AddressInvalidError				Invalid address error. Address must be within respective block: User Programs 0-2999, User Memory 3000-6999, OS Memory 7000-9999
+	 *			-3:		InvalidPCValueError				Invalid PC value. Value must be between 0 and 9999
+	 *			-4: 	NoEndOfProgramError				Missing end of program indicator
+	 * 			-13:	NoFreeMemoryError				No free memory to allocate from list
+	 * 			-14:	InvalidMemorySizeError			Invalid Memory Size. Size must be greater than 0.
 	 * 
 	 * Author: Jonathon Ku
 	 * Change Log:
-	 * 		4/4/2019: Wrote MemFreeSystemCall method. Not yet tested.
+	 * 		4/11/2019: Wrote CreateProcess method.
 	 *****************************************************************************/
 	public static long CreateProcess(String filename, long priority) 
 	{
@@ -1910,11 +1948,155 @@ public class HYPOMachine
 		
 		//Insert PCB into RQ. No need to check for errors as the address was given by 
 		//AllocateOSMemory method, so address will be valid.
-		long status = InsertIntoRQ(PCBptr);
+		InsertIntoRQ(PCBptr);
 		
 		return(Success);
 	}	
+	
+	/*****************************************************************************
+	 * Function: SelectProcessFromRQ
+	 * 
+	 * Task Description:
+	 * 		Returns the first PCB in Ready Queue
+	 * 
+	 * Input Parameters:
+	 * 		None
+	 * 
+	 * Output Parameters:
+	 * 		None
+	 * 
+	 * Function Return Value 
+	 *			>0: 	Success							Address of First PCB in RQ	
+	 * 
+	 * Author: Jonathon Ku
+	 * Change Log:
+	 * 		4/11/2019: Wrote SelectProcessFromRQ method.
+	 *****************************************************************************/	
+	public static long SelectProcessFromRQ() 
+	{
+		long PCBptr = RQ;
+		//Do we need to make an error for no PCB in RQ?
+		if(RQ != EOL)
+		{
+			//Remove first PCB from RQ
+			RQ = MAINMEMORY[(int)RQ];
+		}
+		
+		//Set next PCB of PCB to EOL
+		MAINMEMORY[(int)(PCBptr + PCBNEXTPCBINDEX)] = EOL;
+		
+		return PCBptr;
+	}
 
+	/*****************************************************************************
+	 * Function: SaveContext
+	 * 
+	 * Task Description:
+	 * 		stores GPR values, SP and PC to PCB.
+	 * 
+	 * Input Parameters:
+	 * 		PCBptr				Points to the PCB we wish to save
+	 * 
+	 * Output Parameters:
+	 * 		None
+	 * 
+	 * Function Return Value: 
+	 *		None
+	 *
+	 * Author: Jonathon Ku
+	 * Change Log:
+	 * 		4/11/2019: Wrote SaveContext method.
+	 *****************************************************************************/		
+	public static void SaveContext(long PCBptr)
+	{
+		//Assume PCBptr is a valid pointer.
+		//Copy contents of GPRS into PCB
+		MAINMEMORY[(int)(PCBptr + PCBGPR0)] = GPRS[0];
+		MAINMEMORY[(int)(PCBptr + PCBGPR1)] = GPRS[1];
+		MAINMEMORY[(int)(PCBptr + PCBGPR2)] = GPRS[2];
+		MAINMEMORY[(int)(PCBptr + PCBGPR3)] = GPRS[3];
+		MAINMEMORY[(int)(PCBptr + PCBGPR4)] = GPRS[4];
+		MAINMEMORY[(int)(PCBptr + PCBGPR5)] = GPRS[5];
+		MAINMEMORY[(int)(PCBptr + PCBGPR6)] = GPRS[6];
+		MAINMEMORY[(int)(PCBptr + PCBGPR7)] = GPRS[7];
+		
+		//Copy SP and PC into PCB
+		MAINMEMORY[(int)(PCBptr + PCBSPINDEX)] = SP;
+		MAINMEMORY[(int)(PCBptr + PCBPCINDEX)] = PC;
+		
+		return;
+	}
+
+	/*****************************************************************************
+	 * Function: Dispatcher
+	 * 
+	 * Task Description:
+	 * 		restores CPU context from PCB into CPU registers. This is used when a
+	 * 		process is given the CPU once again.
+	 * 
+	 * Input Parameters:
+	 * 		PCBptr				Points to the PCB we wish to load
+	 * 
+	 * Output Parameters:
+	 * 		None
+	 * 
+	 * Function Return Value: 
+	 *		None
+	 * Author: Jonathon Ku
+	 * Change Log:
+	 * 		4/11/2019: Wrote Dispatcher method.
+	 *****************************************************************************/		
+	public static void Dispatcher(long PCBptr)
+	{
+		//PCBptr is assumed to be correct
+		//Copy CPU GPR register values from PCB into CPU registers
+		GPRS[0] = MAINMEMORY[(int)(PCBptr + PCBGPR0)];
+		GPRS[1] = MAINMEMORY[(int)(PCBptr + PCBGPR1)];
+		GPRS[2] = MAINMEMORY[(int)(PCBptr + PCBGPR2)];
+		GPRS[3] = MAINMEMORY[(int)(PCBptr + PCBGPR3)];
+		GPRS[4] = MAINMEMORY[(int)(PCBptr + PCBGPR4)];
+		GPRS[5] = MAINMEMORY[(int)(PCBptr + PCBGPR5)];
+		GPRS[6] = MAINMEMORY[(int)(PCBptr + PCBGPR6)];
+		GPRS[7] = MAINMEMORY[(int)(PCBptr + PCBGPR7)];
+		
+		//Copy SP and PC from PCB
+		SP = MAINMEMORY[(int)(PCBptr + PCBSPINDEX)];
+		PC = MAINMEMORY[(int)(PCBptr + PCBPCINDEX)];
+		
+		//Set system mode to User Mode
+		PSR = UserMode;
+		
+		return;
+	}
+
+	/*****************************************************************************
+	 * Function: TerminateProcess
+	 * 
+	 * Task Description:
+	 * 		Free allocated memory to Process back to OSFreeList and UserFreeList		
+	 * 
+	 * Input Parameters:
+	 * 		PCBptr				Points to the PCB we wish to terminate
+	 * 
+	 * Output Parameters:
+	 * 		None
+	 * 
+	 * Function Return Value: 
+	 *		None
+	 * Author: Jonathon Ku
+	 * Change Log:
+	 * 		4/11/2019: Wrote Dispatcher method.
+	 *****************************************************************************/	
+	public static void TerminateProcess(long PCBptr)
+	{
+		//Return User Memory using the stack address and size in PCB
+		FreeUserMemory(MAINMEMORY[(int)(PCBptr + PCBSTACKSTARTINDEX)], MAINMEMORY[(int)(PCBptr + PCBSTACKSIZEINDEX)]);
+		
+		//Return OS memory using the PCBptr and constant PCBSize
+		FreeOSMemory(PCBptr, PCBSIZE);
+		
+		return;
+	}
 	
 	/*
 	// Function: 
@@ -1949,7 +2131,6 @@ public class HYPOMachine
 
 		return;
 	}
-
 	
 	/*
 	// Function: 
@@ -1968,7 +2149,6 @@ public class HYPOMachine
 	// Author:
 	// Gabe Freitas
 	*/
-
 	private static void CheckAndProcessInterrupt()
 	{
 		Scanner userIn = new Scanner(System.in);
@@ -2011,6 +2191,7 @@ public class HYPOMachine
 				System.out.println("Invalid interrupt ID");
 				break;
 		}//end of InterruptIDSwitch
+		userIn.close();
 		return;
 	}//End of CheckAndProcessInterrupt() function
 
@@ -2036,7 +2217,8 @@ public class HYPOMachine
 		System.out.println("Please enter the filename: ");
 		String fileName = userIn.nextLine();
 
- 		//CreateProcess(fileName, DEFAULTPRIORITY); Delete this later when this exists
+ 		CreateProcess(fileName, DEFAULTPRIORITY);
+		userIn.close();
 		return;
 	}
 
@@ -2108,6 +2290,7 @@ public class HYPOMachine
 
 		//Inform user PID is invalid
 		System.out.println("Invalid PID: " + desiredPID +  ", please enter valid PID");
+		userIn.close();
 		return;
 	 } //End of ISRinputCompletionInterrupt() function
 	 
@@ -2171,7 +2354,7 @@ public class HYPOMachine
 			//Iterate through RQPCB
 			rqPCB = MAINMEMORY[(int)(rqPCB + PCBNEXTPCBINDEX)];
 		}
-
+		userIn.close();
 		//Inform user inputted PID is invalid
 		System.out.println("Invalid PID: " + desiredPID +  ", please enter valid PID");
 		return;
