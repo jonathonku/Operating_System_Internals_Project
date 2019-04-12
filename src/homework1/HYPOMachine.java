@@ -47,6 +47,7 @@ package homework1;
 
 //import java.util.LinkedList;
 import java.util.Scanner;
+
 import java.io.*;
 
 
@@ -93,6 +94,7 @@ public class HYPOMachine
 	final private static long PCBSTACKSIZE = 100;				//Size of stack allocated for PCB
 	final private static long STARTOFINPUTEVENT = 3;
 	final private static long STARTOFOUTPUTEVENT = 4;
+	final private static long ReasonForWaitingIndex = 3;
 
 	private static long CLOCK;									//Keeps track of how long it has taken for execution
 	private static long MAR;									//Contains the current address of instruction in main memory
@@ -145,6 +147,8 @@ public class HYPOMachine
 	final static private long InvalidMemorySizeError = -14;
 	final static private long InvalidPIDError = -15;
 	final static private long InvalidSystemCallID = -16;
+	final static private long ShutdownError = -17;
+	final static private long TimeSliceExpiredError = -18;
 	
 	/*****************************************************************************
 	 * Function: InitializeSystem
@@ -1072,6 +1076,10 @@ public class HYPOMachine
 			}
 				
 		}while(MBR != 0 && status == 0 && timeLeft > 0);
+		if(timeLeft <= 0)
+		{
+			status = TimeSliceExpiredError;
+		}
 		return status;
 	}
 	
@@ -2150,10 +2158,11 @@ public class HYPOMachine
 	// Author:
 	// Gabe Freitas
 	*/
-	private static void CheckAndProcessInterrupt()
+	private static long CheckAndProcessInterrupt()
 	{
 		Scanner userIn = new Scanner(System.in);
 
+		long status = Success;
 
 		//Print out the possible inputs allowed by user and what they do
 		System.out.println("Please enter the interrupt ID: ");
@@ -2178,6 +2187,7 @@ public class HYPOMachine
 
  			case 2:
 				ISRShutdownSystem();
+				status = ShutdownError; 
 				break;
 
  			case 3: 
@@ -2193,7 +2203,7 @@ public class HYPOMachine
 				break;
 		}//end of InterruptIDSwitch
 		userIn.close();
-		return;
+		return status;
 	}//End of CheckAndProcessInterrupt() function
 
 	/*
@@ -2456,10 +2466,10 @@ public class HYPOMachine
 				System.out.println("Message receive system call not implemented");
 				break;
 			case 8:
-				//status = io_getcSystemCall(); Uncomment when ready
+				status = io_getcSystemCall(); 
 				break;
 			case 9:
-				//status = io_putcSystemCall(); Uncomment when ready
+				status = io_putcSystemCall();
 				break;
 			case 10:
 				System.out.println("Time get system call not implemented");
@@ -2560,10 +2570,65 @@ public class HYPOMachine
 		InitializeSystem();
 		//Initialize SP to allow 99 objects to be pushed on stack.
 		SP = 9999-99; 
-		
+		long status = Success; 
+		while(status != ShutdownError)
+		{
+			status = CheckAndProcessInterrupt();
+
+			if(status != Success)
+			{
+				return;
+			}
+
+			System.out.println("RQ Before CPU Scheduling: ");
+
+			System.out.println("WQ Before CPU Scheduling");
+
+			//runningPCBPtr = SelectProcess();
+
+			//Dispatcher(runningPCBPtr);
+
+			status = ExecuteProgram();
+
+			DumpMemory("Dynamic Memory Area before CPU scheduling", 0, 150);
+
+			if(status == TimeSliceExpiredError)
+			{
+				//SaveContext(runningPCBPtr);
+				//InsertIntoRQ(runningPCBPtr);
+				//runningPCBPtr = EOL;
+			}
+			else if(status < 0)
+			{
+				//TerminateProcess(runningPCBPtr);
+				//runningPCBPtr = EOL;
+			}
+			else if(status == STARTOFINPUTEVENT)
+			{
+				//MAINMEMORY[runningPCBPtr + ReasonForWaitindIndex] = STARTOFINPUTEVENT;
+				//InsertIntoWQ(runningPCBPtr)
+				//runningPCBPtr = EOL;
+			}
+			else if (status == STARTOFOUTPUTEVENT)
+			{
+				//MAINMEMORY[runningPCBPtr + ReasonForWaitindIndex] = STARTOFOUTPUTEVENT;
+				//InsertIntoWQ(runningPCBPtr)
+				//runningPCBPtr = EOL;
+			}
+			else
+			{
+				System.out.println("Unknown error message");
+			}
+		}
+
+		System.out.println("Operating system will now shut down");
+
+		return;
+
+
 		/* Load program entered by user, return PC. If PC is less than 0 then
 		 * error was encountered. Set PSR to Error Code stored in PC, and close program 
-		 */
+		 
 		System.out.println("Please enter the filename for Machine Code to open:");		
 		PC = AbsoluteLoader(userIn.nextLine());
 		//If error was incurred, close Scanner and return to close program
@@ -2577,7 +2642,7 @@ public class HYPOMachine
 		
 		/* Execute the loaded program. If error was encountered, store error code in
 		 * PSR and close program.
-		 */
+		 
 		PSR = ExecuteProgram();
 		//If error was incurred, close Scanner and return to close program
 		if(PSR < 0) {
@@ -2588,7 +2653,7 @@ public class HYPOMachine
 		DumpMemory("After Executing User Program", 0, 99);
 		//Close Scanner and return to close program.
 		userIn.close();
-		return;
+		return;*/
 	}
 }
 
