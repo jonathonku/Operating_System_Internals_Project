@@ -21,8 +21,6 @@
  * 				be specified by the programmer. 
  */
 
-package homework1;
-
 /*
  * Change Log:
  * 
@@ -46,11 +44,10 @@ package homework1;
  */
 
 //import java.util.LinkedList;
+
+package homework1;
 import java.util.Scanner;
-
 import java.io.*;
-
-
 
 public class HYPOMachine 
 {
@@ -69,6 +66,7 @@ public class HYPOMachine
 	final private static long PCBNEXTPCBINDEX = 0;				//Index of Next PCB Address in a PCB
 	final private static long PCBPIDINDEX = 1;					//Index of PID in a PCB
 	final private static long PCBSTATEINDEX = 2;				//Index of State in PCB
+	final private static long PCBREASONFORWAITINGINDEX = 3;		//Index of Reason for Waiting in PCB
 	final private static long PCBPRIORITYINDEX = 4;				//Index of Priority in PCB
 	final private static long PCBSTACKSTARTINDEX = 5;			//Index of PCB stack start address
 	final private static long PCBSTACKSIZEINDEX = 6;			//Index of PCB stack size
@@ -94,7 +92,6 @@ public class HYPOMachine
 	final private static long PCBSTACKSIZE = 100;				//Size of stack allocated for PCB
 	final private static long STARTOFINPUTEVENT = 3;
 	final private static long STARTOFOUTPUTEVENT = 4;
-	final private static long ReasonForWaitingIndex = 3;
 
 	private static long CLOCK;									//Keeps track of how long it has taken for execution
 	private static long MAR;									//Contains the current address of instruction in main memory
@@ -2397,7 +2394,7 @@ public class HYPOMachine
 			RQ = MAINMEMORY[(int)(ptr + PCBNEXTPCBINDEX)];
 			//Set RQ to next process in RQ
 			//Terminate process using rq ptr
-			////TerminateProcess(ptr); Doesn't exist yet
+			TerminateProcess(ptr); 
 			//Set ptr to next value in RQ
 			ptr = (int)RQ;
 		 }
@@ -2410,7 +2407,7 @@ public class HYPOMachine
 			WQ = MAINMEMORY[(int)(ptr+ PCBNEXTPCBINDEX)];
 			//Set WQ to next process in RQ
 			//Terminate process using wq ptr
-			////TerminateProcess(ptr); Doesn't exist yet
+			TerminateProcess(ptr);
 			//Set ptr to next value in WQ
 			ptr = (int)WQ;
 		}
@@ -2584,9 +2581,9 @@ public class HYPOMachine
 
 			System.out.println("WQ Before CPU Scheduling");
 
-			//runningPCBPtr = SelectProcess();
+			long runningPCBPtr = SelectProcessFromRQ();
 
-			//Dispatcher(runningPCBPtr);
+			Dispatcher(runningPCBPtr);
 
 			status = ExecuteProgram();
 
@@ -2594,26 +2591,26 @@ public class HYPOMachine
 
 			if(status == TimeSliceExpiredError)
 			{
-				//SaveContext(runningPCBPtr);
-				//InsertIntoRQ(runningPCBPtr);
-				//runningPCBPtr = EOL;
+				SaveContext(runningPCBPtr);
+				InsertIntoRQ(runningPCBPtr);
+				runningPCBPtr = EOL;
 			}
 			else if(status < 0)
 			{
-				//TerminateProcess(runningPCBPtr);
-				//runningPCBPtr = EOL;
+				TerminateProcess(runningPCBPtr);
+				runningPCBPtr = EOL;
 			}
 			else if(status == STARTOFINPUTEVENT)
 			{
-				//MAINMEMORY[runningPCBPtr + ReasonForWaitindIndex] = STARTOFINPUTEVENT;
-				//InsertIntoWQ(runningPCBPtr)
-				//runningPCBPtr = EOL;
+				MAINMEMORY[(int)(runningPCBPtr + PCBREASONFORWAITINGINDEX)] = STARTOFINPUTEVENT;
+				InsertIntoWQ(runningPCBPtr);
+				runningPCBPtr = EOL;
 			}
 			else if (status == STARTOFOUTPUTEVENT)
 			{
-				//MAINMEMORY[runningPCBPtr + ReasonForWaitindIndex] = STARTOFOUTPUTEVENT;
-				//InsertIntoWQ(runningPCBPtr)
-				//runningPCBPtr = EOL;
+				MAINMEMORY[(int)(runningPCBPtr + PCBREASONFORWAITINGINDEX)] = STARTOFOUTPUTEVENT;
+				InsertIntoWQ(runningPCBPtr);
+				runningPCBPtr = EOL;
 			}
 			else
 			{
@@ -2622,9 +2619,8 @@ public class HYPOMachine
 		}
 
 		System.out.println("Operating system will now shut down");
-
+		userIn.close();
 		return;
-
 
 		/* Load program entered by user, return PC. If PC is less than 0 then
 		 * error was encountered. Set PSR to Error Code stored in PC, and close program 
@@ -2656,30 +2652,6 @@ public class HYPOMachine
 		return;*/
 	}
 }
-
-
-
-/* Used for Assembler function (which does not exist).
-class Symbol
-{
-	private long address;
-	private String label;
-	public Symbol(long address, String label)
-	{
-		this.address = address;
-		this.label = label;
-	}
-	public long getAddress() 
-	{
-		return address;
-	}
-	public String getLabel()
-	{
-		return label;
-	}
-	
-}
-*/
 
 /******************************************************************************
  * Local Class: Operand
