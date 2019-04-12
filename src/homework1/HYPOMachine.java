@@ -1945,7 +1945,7 @@ public class HYPOMachine
 		DumpMemory("Dumping Process: " + MAINMEMORY[(int)(PCBptr + PCBPIDINDEX)], PCBptr, 0);
 		
 		//Print PCB
-		//PrintPCB(PCBptr);
+		PrintPCB(PCBptr);
 		
 		//Insert PCB into RQ. No need to check for errors as the address was given by 
 		//AllocateOSMemory method, so address will be valid.
@@ -2492,7 +2492,7 @@ public class HYPOMachine
 	 * 
 	 * 
 	 */
-	public void PrintPCB(long PCBptr)
+	public static void PrintPCB(long PCBptr)
 	{
 		/*Print the values of the following fields from PCB with a text before the value like below:
 		*	PCB address = 6000, Next PCB Ptr = 5000, PID = 2, State = 2, PC = 200, SP = 4000, 
@@ -2519,12 +2519,12 @@ public class HYPOMachine
 				System.out.print(pcbFormat.toString());
 	}  // end of PrintPCB() function
 
-	public long io_getcSystemCall()
+	public static long io_getcSystemCall()
 	{
 		return STARTOFOUTPUTEVENT;
 	}
 
-	public long io_putcSystemCall()
+	public static long io_putcSystemCall()
 	{
 		return STARTOFINPUTEVENT;
 	}
