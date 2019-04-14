@@ -89,7 +89,7 @@ public class HYPOMachine
 	final private static long OSMode = 1;						//Represents System in OS control
 	final private static long UserMode = 2;						//Represents System in User control
 	final private static long PCBSIZE = 20;						//Size of a PCB
-	final private static long PCBSTACKSIZE = 100;				//Size of stack allocated for PCB
+	final private static long PCBSTACKSIZE = 200;				//Size of stack allocated for PCB
 	final private static long STARTOFINPUTEVENT = 3;
 	final private static long STARTOFOUTPUTEVENT = 4;
 
@@ -125,7 +125,8 @@ public class HYPOMachine
 	 * 		-14:	InvalidMemorySizeError			Invalid Memory Size. Size must be greater than 0.
 	 * 		-15: 	InvalidPIDError					Invalid PID. Not found in queue.
 	 * 		-16:	InvalidSystemCallID				Invalid System Call ID. Only implemented 1-9.
-	 * 
+	 * 		-17:	ShutdownError					System Shutdown Interrupt invoked. Shutdown system
+	 *		-18:	TimeSliceExpiredError			TimeSlice allocated for process has expired. Release CPU to another process.
 	 *****************************************************************************/
 	final static private long Success = 0;
 	final static private long FileOpenError = -1;
@@ -367,27 +368,8 @@ public class HYPOMachine
 	{
 		//Local Variables
 		String temp = "";	//Used to contain each line of the file without redeclaring temp
-		/* 
-		This Code is for Assembler Function (which doesn't exist)
-		int origin = 0;
-		String writeMachineComments = fileName.substring(0, fileName.length()-4) + "MachineCodeComments.txt";
-		String writeMachineCode = fileName.substring(0, fileName.length()-4) + "MachineCode.txt";
-		String writeSymbolTable = fileName.substring(0, fileName.length()-4) + "SymbolTable.txt";
-		String separator = System.lineSeparator();
-		String[] mnemonics = {"Halt", "Add", "Subtract", "Multiply", "Divide", "Move", 
-				"Branch", "BrOnMinus", "BrOnPlus", "BrOnZero", "Push", "Pop", "SystemCall"};
-		LinkedList<Symbol> symbolLabel = new LinkedList<Symbol>();
-		int labelCounter = 0;
-		int address = 0;
-		*/
-		
 		try 
 		{
-			/* This Code is for Assembler Function (which doesn't exist)
-			FileWriter fileMachineComments = new FileWriter(new File(writeMachineComments));
-			FileWriter fileMachineCode = new FileWriter(new File(writeMachineCode));
-			FileWriter fileSymbolTable = new FileWriter(new File(writeSymbolTable));
-			*/
 			//Declare and initialize a scanner to try and read file specified by fileName
 			Scanner fileReader = new Scanner(new File(fileName));	
 			//Loop through file line by line until end of file or end of program indicator
@@ -420,10 +402,10 @@ public class HYPOMachine
 					}
 				}
 				/* Check to ensure that the address is a valid address. It must be greater than
-				 * or equal to 0 or less than 10000. If it is, set the appropriate address in
+				 * or equal to 0 or less than 3000 (2999 is the Maximum Program Address). If it is, set the appropriate address in
 				 * MAINMEMORY to equal the instruction
 				 */
-				else if(Integer.parseInt(line[0]) >= 0 && Integer.parseInt(line[0]) < 10000)
+				else if(Integer.parseInt(line[0]) >= 0 && Integer.parseInt(line[0]) < 3000)
 				{
 					int address = Integer.parseInt(line[0]);
 					long instruction = Long.parseLong(line[1]);
@@ -437,74 +419,7 @@ public class HYPOMachine
 					System.out.println("Invalid address error. Address must be within respective block: User Programs 0-2999, User Memory 3000-6999, OS Memory 7000-9999");
 					fileReader.close();
 					return AddressInvalidError;
-				}
-				/* This Code and Documentation is for Assembler Function (which doesn't exist)
-				 * Split the line based on the \t character to achieve indices which
-				 * line up with appropriate columns. Due to inconsistent tabbing
-				 * caused by word length, we must remove all elements in delimed array
-				 * which are equivalent to "". 
-				 * Because the first column contains either a label or not, we are able
-				 * to copy delimed[0] to labels[0]. The third column may or may not
-				 * contain operands, so we fill it with "" so it does not remain null.
-				 * The last column will always contain the last element in the delimed
-				 * array.
-				 * Then iterate through delimed to pull the elements between the first
-				 * and last elements, which are not "" and put them in the second and
-				 * third column, depending on the order they appear.
-				String[] delimed = temp.split("\t");
-				String[] labels = new String[4];
-				labelCounter = 1;
-				labels[0] = delimed[0];
-				labels[2] = "";
-				labels[3] = delimed[delimed.length-1];
-				for(int j = 1; j < delimed.length-1; j++)
-				{
-					if(!(delimed[j].equals("")))
-					{
-						labels[labelCounter] = delimed[j];
-						labelCounter++;
-					}
-				}				
-				if(labels[0].equals("Label"))
-				{
-					fileMachineComments.write("Address\tContent\tComment" + separator);
-					fileMachineComments.flush();
-					
-					fileSymbolTable.write("Symbol\tValue(Address)" + separator);
-					fileSymbolTable.flush();
-				}
-				else if(labels[0].equals("main"))
-				{
-					origin = address;
-					fileSymbolTable.write(labels[0] + "\t" + address + separator);
-					fileSymbolTable.flush();
-				}
-				else if(!(temp.subSequence(0, 1).equals("\t")))
-				{
-					fileSymbolTable.write(labels[0] + "\t" + address + separator);
-					fileSymbolTable.flush();
-					address++;
-					symbolLabel.add(new Symbol(address, labels[0]));
-					
-					for(int mnemonicCheck = 0; mnemonicCheck < mnemonics.length; mnemonicCheck++) 
-					{
-						if(mnemonics[mnemonicCheck].equals(labels[1]))
-						{
-							fileMachineComments.write(address + "\t" + mnemonicCheck + "\t" + labels[3] + separator);
-							fileMachineCode.write(address + "\t" + mnemonicCheck + separator);
-							String[] operands = labels[2].split(",");
-							
-							for(int i = 0; i < operands.length; i++) 
-							{
-								System.out.print(i + "\t" + operands[i] + "\t");				
-							}
-							System.out.println();
-							
-							address++;
-						}							
-					}
-				}
-				*/				
+				}		
 			}
 			/* If file is read through without finding an end of program indicator
 			 * display error message return error code.
@@ -512,10 +427,7 @@ public class HYPOMachine
 			System.out.println("End of program reached without indicator");
 			fileReader.close();
 			return NoEndOfProgramError;
-			/*
-			fileMachineComments.close();
-			fileMachineCode.close();
-			*/
+			
 		}
 		/* If FileNotFoundException is caught, display error message and return error.
 		 * If program reached outside of the try/catch structure, file is also not read
@@ -1047,20 +959,12 @@ public class HYPOMachine
 
 
 						op1 = FetchOperand(op1Mode, op1GPR);
-						if(op1.getStatus() < 0)
+						status = op1.getStatus(); 
+						if(status < 0)
 						{
 							return(status);
 						}
-						if(PC >= 0 && PC < 10000)
-						{
-							systemCallID = MAINMEMORY[(int)PC++];
-							status = SystemCall(op1.getValue());
-						}
-						else
-						{
-							System.out.println("Invalid PC value. Value must be between 0 and 9999");
-							status =  InvalidPCValueError;
-						}
+						status = SystemCall(op1.getValue());
 						CLOCK +=12;
 						timeLeft -=12;
 						break;
@@ -1579,7 +1483,7 @@ public class HYPOMachine
 				{
 					UserFreeList = MAINMEMORY[(int)curPtr]; //set first block of UserFreeList to the next block
 					MAINMEMORY[(int)curPtr] = EOL; //reset pointer to next block to EOL so it is completely removed from the list
-					return curPtr; //return memory address of allocated OS block
+					return curPtr; //return memory address of allocated User block
 				}
 				else //Found but not in first block
 				{
@@ -1941,13 +1845,14 @@ public class HYPOMachine
 		
 		//Store stack information in PCB (SP, ptr, and size)
 		MAINMEMORY[(int)(PCBptr + PCBSPINDEX)] = ptr; //empty stack is low address, full is high address
-		MAINMEMORY[(int)(PCBptr + PCBSTACKSTARTINDEX)] = ptr;
-		MAINMEMORY[(int)(PCBptr + PCBSTACKSIZEINDEX)] = PCBSTACKSIZE;
+		MAINMEMORY[(int)(PCBptr + PCBSTACKSTARTINDEX)] = ptr; 
+		MAINMEMORY[(int)(PCBptr + PCBSTACKSIZEINDEX)] = PCBSTACKSIZE; 
 		
+		//Set priority of PCB
 		MAINMEMORY[(int)(PCBptr + PCBPRIORITYINDEX)] = priority;
 		
-		//Need to figure out how to dump specifically program area. Is it PC or SP?
-		DumpMemory("Dumping Process: " + MAINMEMORY[(int)(PCBptr + PCBPIDINDEX)], PCBptr, 0);
+		//Dump Memory
+		DumpMemory("Dumping Process: " + MAINMEMORY[(int)(PCBptr + PCBPIDINDEX)], ptr, PCBSTACKSIZE);
 		
 		//Print PCB
 		PrintPCB(PCBptr);
@@ -2302,7 +2207,6 @@ public class HYPOMachine
 		return;
 	 } //End of ISRinputCompletionInterrupt() function
 	 
-	 
 	/*
 	// Function: 
 	// ISROutputCompletionInterrupt
@@ -2551,22 +2455,18 @@ public class HYPOMachine
 	 * Function Return Value 
 	 * 		None
 	 * 
-	 * Author: Jonathon Ku
+	 * Author: Jonathon Ku & Gabe Freitas
 	 * Change Log:
 	 * 		2/8/2019: Created scanner to read user input. Prompts user to enter a file
 	 * 		to open. Then it calls the AbsoluteLoader using the file they enter. If
 	 * 		AbsoluteLoader returns an error code, represented by a value less than 0,
 	 * 		end program using return.
-	 * 		2/10/2019: 
+	 * 
 	 *****************************************************************************/
 	public static void main(String[] args) 
 	{
-		//Local Variables
-		Scanner userIn = new Scanner(System.in);	//Initialize Scanner to read user input from System.
 		//Initialize all global variables to 0.
-		InitializeSystem();
-		//Initialize SP to allow 99 objects to be pushed on stack.
-		SP = 9999-99; 
+		InitializeSystem(); 
 		long status = Success; 
 		while(status != ShutdownError)
 		{
@@ -2619,7 +2519,6 @@ public class HYPOMachine
 		}
 
 		System.out.println("Operating system will now shut down");
-		userIn.close();
 		return;
 
 		/* Load program entered by user, return PC. If PC is less than 0 then
