@@ -1848,7 +1848,7 @@ public class HYPOMachine
 		MAINMEMORY[(int)(PCBptr + PCBPRIORITYINDEX)] = priority;
 		
 		//Dump Memory
-		DumpMemory("Dumping Process: PID " + MAINMEMORY[(int)(PCBptr + PCBPIDINDEX)], ptr, PCBSTACKSIZE);
+		DumpMemory("Dumping Process: PID " + MAINMEMORY[(int)(PCBptr + PCBPIDINDEX)], MINPROGRAMADDRESS, MAXPROGRAMADDRESS - MINPROGRAMADDRESS + 1);
 		
 		//Print PCB
 		PrintPCB(PCBptr);
@@ -2064,11 +2064,11 @@ public class HYPOMachine
 
 		//Print out the possible inputs allowed by user and what they do
 		System.out.println("Possible interrupt IDs:");
-		System.out.println("0 - no interrupt");
-		System.out.println("1 - run program");
-		System.out.println("2 - shutdown system");
-		System.out.println("3 - input operation completion");
-		System.out.println("4 - Output operation complete");
+		System.out.println("0 - No Interrupt");
+		System.out.println("1 - Run Program");
+		System.out.println("2 - Shutdown System");
+		System.out.println("3 - Input Operation Completion");
+		System.out.println("4 - Output Operation Completion");
 		System.out.println("Please enter the interrupt ID: ");
 		int interruptID = userIn.nextInt();
 		System.out.println("Interrupt ID inputted: " + interruptID);
@@ -2495,10 +2495,8 @@ public class HYPOMachine
 
 			status = ExecuteProgram();
 
-			DumpMemory("Dynamic Memory Area before CPU scheduling", 0, 150);
+			DumpMemory("Dynamic Memory Area before CPU scheduling", MINUSERMEMADDRESS, MAXUSERMEMADDRESS - MINUSERMEMADDRESS + 1);
 
-			DumpMemory("Dynamic Memory Area before CPU scheduling", 3400, 150);
-			
 			if(status == TimeSliceExpiredError)
 			{
 				SaveContext(runningPCBPtr);
