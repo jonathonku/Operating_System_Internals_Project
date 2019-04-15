@@ -2660,6 +2660,7 @@ public class HYPOMachine
 			{
 				return;
 			}
+<<<<<<< HEAD
 
 			System.out.println("RQ Before CPU Scheduling: ");
 			long iterator = RQ;
@@ -2685,6 +2686,33 @@ public class HYPOMachine
 
 			status = ExecuteProgram();
 
+=======
+
+			System.out.println("RQ Before CPU Scheduling: ");
+			long iterator = RQ;
+			while(iterator != EOL)
+			{
+				System.out.println(iterator);
+				iterator = MAINMEMORY[(int)iterator];
+			}
+			System.out.println();
+			
+			System.out.println("WQ Before CPU Scheduling: ");
+			iterator = WQ;
+			while(iterator != EOL)
+			{
+				System.out.println(MAINMEMORY[(int)iterator]);
+				iterator = MAINMEMORY[(int)iterator];
+			}
+			System.out.println();
+			
+			long runningPCBPtr = SelectProcessFromRQ();
+
+			Dispatcher(runningPCBPtr);
+
+			status = ExecuteProgram();
+
+>>>>>>> 58d78f29b36856a0746d6af1a2c5dc07b7af0d15
 			DumpMemory("Dynamic Memory Area before CPU scheduling", MINUSERMEMADDRESS, MAXUSERMEMADDRESS - MINUSERMEMADDRESS + 1);
 
 			if(status == TimeSliceExpiredError)
