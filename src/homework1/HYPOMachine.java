@@ -85,12 +85,12 @@ public class HYPOMachine
 	final private static long RUNNINGSTATE = 2;					//Value to indicate Running State of a PCB
 	final private static long WAITINGSTATE = 3;					//Value to indicate Waiting State of a PCB
 	final private static long DEFAULTPRIORITY = 128;			//Default Priority of Program
-
+	final private static String NULLPROCESS = "nullProcess.txt";//Filename for the null process to continually run.
 	final private static long OSMode = 1;						//Represents System in OS control
 	final private static long UserMode = 2;						//Represents System in User control
 	final private static long PCBSIZE = 20;						//Size of a PCB
 	final private static long PCBSTACKSIZE = 200;				//Size of stack allocated for PCB
-	final private static long STARTOFINPUTEVENT = 3;
+	final private static long STARTOFINPUTEVENT = 3;			
 	final private static long STARTOFOUTPUTEVENT = 4;
 
 	private static long CLOCK;									//Keeps track of how long it has taken for execution
@@ -208,8 +208,8 @@ public class HYPOMachine
 		MAINMEMORY[(int) OSFreeList] = EOL;
 		MAINMEMORY[(int) OSFreeList + 1] = MAXOSMEMADDRESS - MINOSMEMADDRESS + 1; 
 		
-		//Still need to call create process passing NullProcessExecutableFile and priority zero as arguments (From PsuedoCode)
-		//This is a machine language code which is just a constant loop while there are no other processes to execute.
+		//Create process using Null Process file to continually run system until interrupt or new process is created.
+		CreateProcess(NULLPROCESS, 0);
 	}
 	
 	/*****************************************************************************
@@ -387,6 +387,7 @@ public class HYPOMachine
 				 * Otherwise, the PC is not a valid address, display an error message and
 				 * return appropriate error code.
 				 */
+				System.out.println(line[0] + " " + line[1]);
 				if(!fileReader.hasNextLine() && line[0].equals("-1"))
 				{
 					if(Integer.parseInt(line[1]) < 10000 && Integer.parseInt(line[1]) >= 0) 
@@ -492,7 +493,7 @@ public class HYPOMachine
 		long op2GPR;		//Store Operand 2 GPR of instruction in op2GPR
 		long timeLeft = TIMESLICE; //Timeslice is a constant of 200 clock ticks
 		
-		long systemCallID;	//Used for OpCode 12, System Call. Not used for anything yet. 
+		long systemCallID;	//Used for OpCode 12, System Call.
 		long result = 0;	//Stores result of arithmetic operations
 		long remainder = 0;	//Used to contain the remainder of integer divisions when separating instruction into 5 parts.
 		long status = 0;	//Contains status error codes, if errors occur, otherwise, remains 0. Returned to calling function.
@@ -502,7 +503,7 @@ public class HYPOMachine
 		do 
 		{
 			//Fetch Cycle
-			if(0 <= PC && PC < 10000)
+			if(0 <= PC && PC < 3000)
 			{
 				MAR = PC;
 				PC++;
@@ -973,7 +974,7 @@ public class HYPOMachine
 						status =  InvalidOpcodeError;
 						break;
 				}
-				//System.out.println("Instruction: " + opCode + " " + op1Mode + op1GPR + " " + op2Mode + op2GPR + ". Clock: " + CLOCK);
+				System.out.println("Instruction: " + opCode + " " + op1Mode + op1GPR + " " + op2Mode + op2GPR + ". Clock: " + CLOCK);
 			}
 				
 		}while(MBR != 0 && status == 0 && timeLeft > 0);
@@ -1022,7 +1023,7 @@ public class HYPOMachine
 		long address;	//Contains address of operand. It can be fetched from GPR, from Main Memory, or from Instruction
 		switch((int)opMode) 
 		{
-			case 1:	//Register mode: operand value is in GPR. No register is used
+			case 1:	//Register mode: operand value is in GPR. No address is given
 				return new Operand(0, -1, GPRS[(int)opGPR]);
 			case 2: //Register deferred mode: operand address is in GPR and operand value is in memory
 				address = GPRS[(int)opGPR];
@@ -1331,15 +1332,18 @@ public class HYPOMachine
 					MAINMEMORY[(int) (curPtr + requestedSize)] = MAINMEMORY[(int) curPtr]; //Move address of next block to new block.
 					MAINMEMORY[(int) (curPtr + requestedSize + 1)] = MAINMEMORY[(int) curPtr + 1] - requestedSize; //Calculate size of new block and use it to set new block size index
 					MAINMEMORY[(int) prevPtr] = curPtr + requestedSize; //Point prev block's next block to new smaller block.
-					MAINMEMORY[(int) curPtr] = EOL; //reset pointer to next block to EOL so it is completely removed from the list
+					MAINMEMORY[(int) curPtr] = EOL; //reset pointer to next block to EOL so it is completely removed from the list		
 					return curPtr; //return memory address of allocated OS block
 				}
 			}
 			else //Current block is smaller than requestedSize
 			{
 				//Iterate to next block
+				System.out.println("OSFreeList " + OSFreeList);
+				System.out.println("curPtr" + curPtr);
 				prevPtr = curPtr;
 				curPtr = MAINMEMORY[(int) curPtr];
+				System.out.println("curPtr" + curPtr);
 			}
 		}
 		/*
@@ -1815,6 +1819,7 @@ public class HYPOMachine
 	{
 		//Allocate space for PCB
 		long PCBptr = AllocateOSMemory(PCBSIZE);
+		System.out.println("!!!!!!!!!!!!" + PCBptr);
 		//Check for error, represented with value < 0. Return error code
 		if(PCBptr < 0) 
 		{
@@ -1852,7 +1857,7 @@ public class HYPOMachine
 		MAINMEMORY[(int)(PCBptr + PCBPRIORITYINDEX)] = priority;
 		
 		//Dump Memory
-		DumpMemory("Dumping Process: " + MAINMEMORY[(int)(PCBptr + PCBPIDINDEX)], ptr, PCBSTACKSIZE);
+		DumpMemory("Dumping Process: PID " + MAINMEMORY[(int)(PCBptr + PCBPIDINDEX)], ptr, PCBSTACKSIZE);
 		
 		//Print PCB
 		PrintPCB(PCBptr);
@@ -2067,13 +2072,13 @@ public class HYPOMachine
 		long status = Success;
 
 		//Print out the possible inputs allowed by user and what they do
-		System.out.println("Please enter the interrupt ID: ");
 		System.out.println("Possible interrupt IDs:");
 		System.out.println("0 - no interrupt");
 		System.out.println("1 - run program");
 		System.out.println("2 - shutdown system");
 		System.out.println("3 - input operation completion");
 		System.out.println("4 - Output operation complete");
+		System.out.println("Please enter the interrupt ID: ");
 		int interruptID = userIn.nextInt();
 		System.out.println("Interrupt ID inputted: " + interruptID);
 
@@ -2104,7 +2109,6 @@ public class HYPOMachine
 				System.out.println("Invalid interrupt ID");
 				break;
 		}//end of InterruptIDSwitch
-		userIn.close();
 		return status;
 	}//End of CheckAndProcessInterrupt() function
 
@@ -2131,7 +2135,6 @@ public class HYPOMachine
 		String fileName = userIn.nextLine();
 
  		CreateProcess(fileName, DEFAULTPRIORITY);
-		userIn.close();
 		return;
 	}
 
@@ -2203,7 +2206,7 @@ public class HYPOMachine
 
 		//Inform user PID is invalid
 		System.out.println("Invalid PID: " + desiredPID +  ", please enter valid PID");
-		userIn.close();
+		;
 		return;
 	 } //End of ISRinputCompletionInterrupt() function
 	 
@@ -2266,7 +2269,7 @@ public class HYPOMachine
 			//Iterate through RQPCB
 			rqPCB = MAINMEMORY[(int)(rqPCB + PCBNEXTPCBINDEX)];
 		}
-		userIn.close();
+		;
 		//Inform user inputted PID is invalid
 		System.out.println("Invalid PID: " + desiredPID +  ", please enter valid PID");
 		return;
@@ -2420,12 +2423,12 @@ public class HYPOMachine
 				pcbFormat.append("Next PCB Pointer: " + MAINMEMORY[(int)(PCBptr + PCBNEXTPCBINDEX)] + ", ");
 				pcbFormat.append("PID: " + MAINMEMORY[(int)(PCBptr + PCBPIDINDEX)]+ ", ");
 				pcbFormat.append("PC: "  + MAINMEMORY[(int)(PCBptr + PCBPCINDEX)] + ", ");
-				pcbFormat.append("SP: " + MAINMEMORY[(int)(PCBptr + PCBSPINDEX)]);
+				pcbFormat.append("SP: " + MAINMEMORY[(int)(PCBptr + PCBSPINDEX)] + "\n");
 				pcbFormat.append("Priority = " + MAINMEMORY[(int)(PCBptr + PCBPRIORITYINDEX)] + ", ");
 				pcbFormat.append("Stack info: Start address: " + MAINMEMORY[(int)(PCBptr + PCBSTACKSTARTINDEX)] + ", ");
-				pcbFormat.append("Size:  " + MAINMEMORY[(int)(PCBptr + PCBSTACKSIZEINDEX)] + ", ");
-				pcbFormat.append("GPRs: " + MAINMEMORY[(int)(PCBptr + PCBGPR0)] + ",");
-				pcbFormat.append(MAINMEMORY[(int)(PCBptr + PCBGPR0)] + ", "  + MAINMEMORY[(int)(PCBptr + PCBGPR1)] + ","  + MAINMEMORY[(int)(PCBptr + PCBGPR2)] + ","  + MAINMEMORY[(int)(PCBptr + PCBGPR3)] + ","  + MAINMEMORY[(int)(PCBptr + PCBGPR4)] + ","  + MAINMEMORY[(int)(PCBptr + PCBGPR5)] + ","  + MAINMEMORY[(int)(PCBptr + PCBGPR6)] + ","  + MAINMEMORY[(int)(PCBptr + PCBGPR7)] + ",");
+				pcbFormat.append("Size:  " + MAINMEMORY[(int)(PCBptr + PCBSTACKSIZEINDEX)] + "\n");
+				pcbFormat.append("GPRs: " + MAINMEMORY[(int)(PCBptr + PCBGPR0)] + ", ");
+				pcbFormat.append(MAINMEMORY[(int)(PCBptr + PCBGPR0)] + ", "  + MAINMEMORY[(int)(PCBptr + PCBGPR1)] + ", "  + MAINMEMORY[(int)(PCBptr + PCBGPR2)] + ", "  + MAINMEMORY[(int)(PCBptr + PCBGPR3)] + ", "  + MAINMEMORY[(int)(PCBptr + PCBGPR4)] + ", "  + MAINMEMORY[(int)(PCBptr + PCBGPR5)] + ", "  + MAINMEMORY[(int)(PCBptr + PCBGPR6)] + ", "  + MAINMEMORY[(int)(PCBptr + PCBGPR7)] + "\n");
 				
 				System.out.print(pcbFormat.toString());
 	}  // end of PrintPCB() function
@@ -2478,9 +2481,23 @@ public class HYPOMachine
 			}
 
 			System.out.println("RQ Before CPU Scheduling: ");
-
-			System.out.println("WQ Before CPU Scheduling");
-
+			long iterator = RQ;
+			while(iterator != EOL)
+			{
+				System.out.println(iterator);
+				iterator = MAINMEMORY[(int)iterator];
+			}
+			System.out.println();
+			
+			System.out.println("WQ Before CPU Scheduling: ");
+			iterator = WQ;
+			while(iterator != EOL)
+			{
+				System.out.println(MAINMEMORY[(int)iterator]);
+				iterator = MAINMEMORY[(int)iterator];
+			}
+			System.out.println();
+			
 			long runningPCBPtr = SelectProcessFromRQ();
 
 			Dispatcher(runningPCBPtr);
@@ -2495,7 +2512,7 @@ public class HYPOMachine
 				InsertIntoRQ(runningPCBPtr);
 				runningPCBPtr = EOL;
 			}
-			else if(status < 0)
+			else if(status <= 0)
 			{
 				TerminateProcess(runningPCBPtr);
 				runningPCBPtr = EOL;
@@ -2520,35 +2537,6 @@ public class HYPOMachine
 
 		System.out.println("Operating system will now shut down");
 		return;
-
-		/* Load program entered by user, return PC. If PC is less than 0 then
-		 * error was encountered. Set PSR to Error Code stored in PC, and close program 
-		 
-		System.out.println("Please enter the filename for Machine Code to open:");		
-		PC = AbsoluteLoader(userIn.nextLine());
-		//If error was incurred, close Scanner and return to close program
-		if(PC < 0) {
-			PSR = PC;
-			userIn.close();
-			return;
-		}
-		//Display contents of memory after loading program
-		DumpMemory("After Loading User Program", 0, 99);
-		
-		/* Execute the loaded program. If error was encountered, store error code in
-		 * PSR and close program.
-		 
-		PSR = ExecuteProgram();
-		//If error was incurred, close Scanner and return to close program
-		if(PSR < 0) {
-			userIn.close();
-			return;
-		}
-		//Display contents of memory after executing program
-		DumpMemory("After Executing User Program", 0, 99);
-		//Close Scanner and return to close program.
-		userIn.close();
-		return;*/
 	}
 }
 
