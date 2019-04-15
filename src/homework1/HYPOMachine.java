@@ -207,7 +207,6 @@ public class HYPOMachine
 		OSFreeList = MINOSMEMADDRESS;
 		MAINMEMORY[(int) OSFreeList] = EOL;
 		MAINMEMORY[(int) OSFreeList + 1] = MAXOSMEMADDRESS - MINOSMEMADDRESS + 1; 
-		
 		//Create process using Null Process file to continually run system until interrupt or new process is created.
 		CreateProcess(NULLPROCESS, 0);
 	}
@@ -387,10 +386,9 @@ public class HYPOMachine
 				 * Otherwise, the PC is not a valid address, display an error message and
 				 * return appropriate error code.
 				 */
-				System.out.println(line[0] + " " + line[1]);
 				if(!fileReader.hasNextLine() && line[0].equals("-1"))
 				{
-					if(Integer.parseInt(line[1]) < 10000 && Integer.parseInt(line[1]) >= 0) 
+					if(Integer.parseInt(line[1]) < 3000 && Integer.parseInt(line[1]) >= 0) 
 					{
 						fileReader.close();
 						return Integer.parseInt(line[1]);
@@ -549,7 +547,6 @@ public class HYPOMachine
 			else 
 			{
 				//Execute Cycle
-				//System.out.println("Instruction " + MAR + ":\t" + opCode + " " + op1Mode + op1GPR + " " + op2Mode + op2GPR);
 				switch((int)opCode)
 				{
 					case 0: //Halt
@@ -974,7 +971,6 @@ public class HYPOMachine
 						status =  InvalidOpcodeError;
 						break;
 				}
-				System.out.println("Instruction: " + opCode + " " + op1Mode + op1GPR + " " + op2Mode + op2GPR + ". Clock: " + CLOCK);
 			}
 				
 		}while(MBR != 0 && status == 0 && timeLeft > 0);
@@ -1320,7 +1316,7 @@ public class HYPOMachine
 			else if(MAINMEMORY[(int) curPtr + 1] > requestedSize)
 			{
 				if(curPtr == OSFreeList) //Found in first block
-				{
+				{	
 					MAINMEMORY[(int) (curPtr + requestedSize)] = MAINMEMORY[(int) curPtr]; //Move address of next block to new block.
 					MAINMEMORY[(int) (curPtr + requestedSize + 1)] = MAINMEMORY[(int) curPtr + 1] - requestedSize; //Calculate size of new block and use it to set new block size index
 					OSFreeList = curPtr + requestedSize; //Point OSFreeList to new smaller block.
@@ -1338,12 +1334,8 @@ public class HYPOMachine
 			}
 			else //Current block is smaller than requestedSize
 			{
-				//Iterate to next block
-				System.out.println("OSFreeList " + OSFreeList);
-				System.out.println("curPtr" + curPtr);
 				prevPtr = curPtr;
 				curPtr = MAINMEMORY[(int) curPtr];
-				System.out.println("curPtr" + curPtr);
 			}
 		}
 		/*
@@ -1819,7 +1811,6 @@ public class HYPOMachine
 	{
 		//Allocate space for PCB
 		long PCBptr = AllocateOSMemory(PCBSIZE);
-		System.out.println("!!!!!!!!!!!!" + PCBptr);
 		//Check for error, represented with value < 0. Return error code
 		if(PCBptr < 0) 
 		{
@@ -2034,7 +2025,7 @@ public class HYPOMachine
 	private static void InitializePCB(long PCBPtr)
 	{
 		//Iterate through PCB array to make values equal to 0
-		for(int pcbIndex = 1; pcbIndex <= 21; pcbIndex++)
+		for(int pcbIndex = 2; pcbIndex <= PCBSIZE; pcbIndex++)
 		{
 			MAINMEMORY[(int)(PCBPtr + pcbIndex)] = 0;
 		}
@@ -2474,7 +2465,7 @@ public class HYPOMachine
 		while(status != ShutdownError)
 		{
 			status = CheckAndProcessInterrupt();
-
+			
 			if(status != Success)
 			{
 				return;
@@ -2506,6 +2497,8 @@ public class HYPOMachine
 
 			DumpMemory("Dynamic Memory Area before CPU scheduling", 0, 150);
 
+			DumpMemory("Dynamic Memory Area before CPU scheduling", 3400, 150);
+			
 			if(status == TimeSliceExpiredError)
 			{
 				SaveContext(runningPCBPtr);
