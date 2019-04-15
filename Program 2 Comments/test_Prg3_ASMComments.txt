@@ -1,0 +1,18 @@
+Label	Mnemonic	Operands	Description
+main	Function			Start of Main Function	Long		
+Count	Long		7		number of times function loops
+Temp	Long		550		Declare Temp and initialize it to 550
+Final	Long		0		Declare Final and initialize it to 0
+Start	Move		R1,Count		Initialize R1 to count
+	Move		R2,0				
+Loop	Push		R2,R1
+	Move 		R2,0
+	Push		R3,R1
+	Move		R3,0
+	Push		R4,R1
+	Move		R4,Temp
+	BrOnPlus	Count,Loop	if Count > 0, Jump to Loop
+	Pop		Final,R1
+	Halt
+	Move		Final,0
+	End		Start		

@@ -1,0 +1,18 @@
+Address	Content	Comment
+0	7	Count, set number of loop
+1	550 	Count long 550; Temp count to 550
+2	0	Final long 0; Variable final set to 0
+3	0	Final long 0; variable Final set to 0
+4	51150	Start Move R1,Count, set r1 to count
+5	7	R1
+6	51250	Start Move R2, set R2 to 0
+7	0	R2 
+6	105000	Push into R2
+7	51250	Move R2 to Temp 
+8	85060	Loop back to Count
+9	115000	Pop out numbers
+10	0	Halt
+11	51150	Move back to R1
+-1	4	End of program
+
+
