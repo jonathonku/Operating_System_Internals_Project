@@ -1803,9 +1803,10 @@ public class HYPOMachine
 	 * 			-13:	NoFreeMemoryError				No free memory to allocate from list
 	 * 			-14:	InvalidMemorySizeError			Invalid Memory Size. Size must be greater than 0.
 	 * 
-	 * Author: Jonathon Ku
+	 * Author: India Ervin
 	 * Change Log:
 	 * 		4/11/2019: Wrote CreateProcess method.
+	 * 		4/15/2019: Revised By Jonathon Ku
 	 *****************************************************************************/
 	public static long CreateProcess(String filename, long priority) 
 	{
@@ -1910,9 +1911,10 @@ public class HYPOMachine
 	 * Function Return Value: 
 	 *		None
 	 *
-	 * Author: Jonathon Ku
+	 * Author: India Ervin
 	 * Change Log:
 	 * 		4/11/2019: Wrote SaveContext method.
+	 * 		4/15/2019: Revised By Jonathon Ku	
 	 *****************************************************************************/		
 	public static void SaveContext(long PCBptr)
 	{
@@ -1949,9 +1951,10 @@ public class HYPOMachine
 	 * 
 	 * Function Return Value: 
 	 *		None
-	 * Author: Jonathon Ku
+	 * Author: India Ervin
 	 * Change Log:
 	 * 		4/11/2019: Wrote Dispatcher method.
+	 * 	 	4/15/2019: Revised By Jonathon Ku
 	 *****************************************************************************/		
 	public static void Dispatcher(long PCBptr)
 	{
@@ -1990,9 +1993,11 @@ public class HYPOMachine
 	 * 
 	 * Function Return Value: 
 	 *		None
-	 * Author: Jonathon Ku
+	 * Author: India Ervin
+	 * 
 	 * Change Log:
-	 * 		4/11/2019: Wrote Dispatcher method.
+	 * 		4/11/2019: Wrote TerminateProcess method.
+	 * 		4/15/2019: Revised By Jonathon Ku
 	 *****************************************************************************/	
 	public static void TerminateProcess(long PCBptr)
 	{
@@ -2280,7 +2285,7 @@ public class HYPOMachine
 	// None
 	// 
 	// Author:
-	// Gabe Freitas
+	// Gabe Freitas 
 	*/
 	static void ISRShutdownSystem()
 	{
@@ -2393,7 +2398,8 @@ public class HYPOMachine
 	 * Output:
 	 * 		None
 	 * 
-	 * Author: Gabe Freitas
+	 * Author: India Ervin 4/11
+	 * Revised by: Gabe Freitas 4/15
 	 * 
 	 * 
 	 */
