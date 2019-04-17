@@ -395,7 +395,7 @@ public class HYPOMachine
 					}
 					else 
 					{
-						System.out.println("Invalid PC value. Value must be between 0 and 9999");
+						System.out.println("Invalid PC value. Value must be between 0 and 2999");
 						fileReader.close();
 						return InvalidPCValueError;
 					}
@@ -904,6 +904,7 @@ public class HYPOMachine
 							{
 								SP++;
 								MAINMEMORY[(int)SP] = op1.getValue();
+								System.out.println("Pushing value: " + op1.getValue());
 							}
 						}
 						CLOCK +=2;
@@ -929,9 +930,10 @@ public class HYPOMachine
 							}
 							else
 							{
+								long value = MAINMEMORY[(int)SP];
 								if(op1Mode == 1)
 								{
-									GPRS[(int)op1GPR] = MAINMEMORY[(int)SP];
+									GPRS[(int)op1GPR] = value;
 								}
 								else if(op1Mode == 6)
 								{
@@ -940,8 +942,9 @@ public class HYPOMachine
 								}
 								else
 								{
-									MAINMEMORY[(int)op1.getAddress()] = MAINMEMORY[(int)SP];
+									MAINMEMORY[(int)op1.getAddress()] = value;
 								}
+								System.out.println("Popping value: " + value);
 								SP--;
 							}
 						}
@@ -1849,7 +1852,7 @@ public class HYPOMachine
 		MAINMEMORY[(int)(PCBptr + PCBPRIORITYINDEX)] = priority;
 		
 		//Dump Memory
-		DumpMemory("Dumping Process: PID " + MAINMEMORY[(int)(PCBptr + PCBPIDINDEX)], MINPROGRAMADDRESS, MAXPROGRAMADDRESS - MINPROGRAMADDRESS + 1);
+		DumpMemory("Dumping Process: PID " + MAINMEMORY[(int)(PCBptr + PCBPIDINDEX)], MINPROGRAMADDRESS, 200);
 		
 		//Print PCB
 		PrintPCB(PCBptr);
@@ -2340,7 +2343,9 @@ public class HYPOMachine
 
 		//Default to OK status
 		long status = Success;
-
+		
+		System.out.println("System Call ID: " + SystemCallID);
+		
 		//Switch for handling SysCallId
 		switch((int)SystemCallID)
 		{
@@ -2354,9 +2359,11 @@ public class HYPOMachine
 				System.out.println("Process inquiry system call not implemented");
 				break;
 			case 4:
+				System.out.println("System Call Name: Memory Allocation");
 				status = MemAllocSystemCall();
 				break;
 			case 5:
+				System.out.println("System Call Name: Memory Free");
 				status = MemFreeSystemCall();
 				break;
 			case 6:
@@ -2366,9 +2373,11 @@ public class HYPOMachine
 				System.out.println("Message receive system call not implemented");
 				break;
 			case 8:
+				System.out.println("System Call Name: Input Interrupt");
 				status = io_getcSystemCall(); 
 				break;
 			case 9:
+				System.out.println("System Call Name: Output Interrupt");
 				status = io_putcSystemCall();
 				break;
 			case 10:
@@ -2496,12 +2505,13 @@ public class HYPOMachine
 			System.out.println();
 			
 			long runningPCBPtr = SelectProcessFromRQ();
-
+			System.out.println("Running Process: " + runningPCBPtr);	
+			
 			Dispatcher(runningPCBPtr);
 
 			status = ExecuteProgram();
 
-			DumpMemory("Dynamic Memory Area before CPU scheduling", MINUSERMEMADDRESS, MAXUSERMEMADDRESS - MINUSERMEMADDRESS + 1);
+			DumpMemory("Dynamic Memory Area before CPU scheduling", MINUSERMEMADDRESS, 250);
 
 			if(status == TimeSliceExpiredError)
 			{
