@@ -45,7 +45,7 @@
 
 //import java.util.LinkedList;
 
-package homework1;
+//package homework1;
 import java.util.Scanner;
 import java.io.*;
 
@@ -2164,6 +2164,7 @@ public class HYPOMachine
 		long prevPCB = EOL; //
 		long rqPCB = RQ; //Start at head of RQ
 		long wqPCB = WQ; //start at head of WQ
+		long pcbPtr;
 
 		//if  wqPCB == EOL, move into checking through RQ
 		//iterate through WQ
@@ -2172,16 +2173,16 @@ public class HYPOMachine
 			if(MAINMEMORY[(int)(wqPCB + PCBPIDINDEX)] == desiredPID)
 			{
 				//If condition is met, remove PID from WQ, store character into PCB GPR 0, and add PCB to RQ
-				SearchAndRemovePCBFromWQ(desiredPID);
+				pcbPtr = SearchAndRemovePCBFromWQ(desiredPID);
 				System.out.println("Please enter a character (A-Z): ");
 				char userChar = userIn.next().charAt(0);
-				MAINMEMORY[(int)(desiredPID + PCBGPR0)] = userChar;
-				MAINMEMORY[(int)(desiredPID + PCBSTATEINDEX)] = READYSTATE;
-				InsertIntoRQ(desiredPID);
+				MAINMEMORY[(int)(pcbPtr + PCBGPR0)] = userChar;
+				MAINMEMORY[(int)(pcbPtr + PCBSTATEINDEX)] = READYSTATE;
+				InsertIntoRQ(pcbPtr);
 				return;
 			}
 
-			prevPCB = desiredPID;
+			prevPCB = wqPCB;
 			wqPCB = MAINMEMORY[(int)(wqPCB + PCBNEXTPCBINDEX)]; //Iterate through WQ
 		}
 
@@ -2194,11 +2195,11 @@ public class HYPOMachine
 			{
 				System.out.println("Please enter a character (A-Z): ");
 				char userChar = userIn.next().charAt(0);
-				MAINMEMORY[(int)(desiredPID + PCBGPR0)] = userChar;
+				MAINMEMORY[(int)(rqPCB + PCBGPR0)] = userChar;
 			}
 
 			//Store previous PCB 
-			prevPCB = desiredPID;
+			prevPCB = rqPCB;
 			//Continue to iterate through RQ
 			rqPCB = MAINMEMORY[(int)(rqPCB + PCBNEXTPCBINDEX)];
 		}
