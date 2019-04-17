@@ -43,9 +43,7 @@
  * 
  */
 
-//import java.util.LinkedList;
-
-//package homework1;
+package homework1;
 import java.util.Scanner;
 import java.io.*;
 
@@ -1346,6 +1344,7 @@ public class HYPOMachine
 		 * and we have iterated through the whole list. Therefore, this is no free
 		 * OS memory
 		 */
+		System.out.println(OSFreeList);
 		System.out.println("No free OS memory");
 		return NoFreeMemoryError;
 	}
@@ -1523,7 +1522,7 @@ public class HYPOMachine
 		 * and we have iterated through the whole list. Therefore, this is no free
 		 * OS memory
 		 */
-		System.out.println("No free OS memory");
+		System.out.println("No free User memory");
 		return NoFreeMemoryError;
 	}
 	
@@ -1689,7 +1688,7 @@ public class HYPOMachine
 		 * is too large for any free block to accommodate. GPR 0 contains the return
 		 * status, set GPR 0 to InvalidMemorySizeError, if applicable, and return it.
 		 */
-		if(size > (MAXUSERMEMADDRESS - MINUSERMEMADDRESS))
+		if(size > (MAXUSERMEMADDRESS - MINUSERMEMADDRESS + 1))
 		{
 			GPRS[0] = InvalidMemorySizeError;
 			return GPRS[0];
@@ -2033,7 +2032,7 @@ public class HYPOMachine
 	private static void InitializePCB(long PCBPtr)
 	{
 		//Iterate through PCB array to make values equal to 0
-		for(int pcbIndex = 2; pcbIndex <= PCBSIZE; pcbIndex++)
+		for(int pcbIndex = 1; pcbIndex <= PCBSIZE; pcbIndex++)
 		{
 			MAINMEMORY[(int)(PCBPtr + pcbIndex)] = 0;
 		}
@@ -2161,7 +2160,6 @@ public class HYPOMachine
 		Scanner userIn = new Scanner(System.in);
 		System.out.println("Please enter the PID of the process:");
 		long desiredPID = userIn.nextInt();
-		long prevPCB = EOL; //
 		long rqPCB = RQ; //Start at head of RQ
 		long wqPCB = WQ; //start at head of WQ
 		long pcbPtr;
@@ -2181,8 +2179,6 @@ public class HYPOMachine
 				InsertIntoRQ(pcbPtr);
 				return;
 			}
-
-			prevPCB = wqPCB;
 			wqPCB = MAINMEMORY[(int)(wqPCB + PCBNEXTPCBINDEX)]; //Iterate through WQ
 		}
 
@@ -2198,8 +2194,6 @@ public class HYPOMachine
 				MAINMEMORY[(int)(rqPCB + PCBGPR0)] = userChar;
 			}
 
-			//Store previous PCB 
-			prevPCB = rqPCB;
 			//Continue to iterate through RQ
 			rqPCB = MAINMEMORY[(int)(rqPCB + PCBNEXTPCBINDEX)];
 		}
@@ -2245,7 +2239,7 @@ public class HYPOMachine
 			{
 				//Remove PCB from WQ and print character in PCB GPR 0
 				SearchAndRemovePCBFromWQ(desiredPID);
-				System.out.println(MAINMEMORY[(int)(wqPCB + PCBGPR0)]);
+				System.out.println("System Call Output: " + (char)(MAINMEMORY[(int)(wqPCB + PCBGPR0)]));
 				MAINMEMORY[(int)(wqPCB + PCBSTATEINDEX)] = READYSTATE;
 				InsertIntoRQ(wqPCB); //Insert PCB into RQ
 				return;
@@ -2512,8 +2506,11 @@ public class HYPOMachine
 
 			status = ExecuteProgram();
 
+			DumpMemory("Dynamic Program Area before CPU scheduling", MINPROGRAMADDRESS, 250);
 			DumpMemory("Dynamic Memory Area before CPU scheduling", MINUSERMEMADDRESS, 250);
-
+			DumpMemory("Dynamic OS Area before CPU scheduling", MINOSMEMADDRESS, 250);
+			
+			
 			if(status == TimeSliceExpiredError)
 			{
 				SaveContext(runningPCBPtr);
@@ -2527,12 +2524,14 @@ public class HYPOMachine
 			}
 			else if(status == STARTOFINPUTEVENT)
 			{
+				SaveContext(runningPCBPtr);
 				MAINMEMORY[(int)(runningPCBPtr + PCBREASONFORWAITINGINDEX)] = STARTOFINPUTEVENT;
 				InsertIntoWQ(runningPCBPtr);
 				runningPCBPtr = EOL;
 			}
 			else if (status == STARTOFOUTPUTEVENT)
 			{
+				SaveContext(runningPCBPtr);
 				MAINMEMORY[(int)(runningPCBPtr + PCBREASONFORWAITINGINDEX)] = STARTOFOUTPUTEVENT;
 				InsertIntoWQ(runningPCBPtr);
 				runningPCBPtr = EOL;

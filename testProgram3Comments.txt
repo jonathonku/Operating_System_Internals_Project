@@ -1,0 +1,33 @@
+Address	Content	Comment
+0	5	Long Count = 5
+1	51260	Start; Move R2, 9; R2 = 9
+2	9	Immediate Operand 9
+3	126000	System Call
+4	4	System Call ID 4: Mem Allocation
+5	51311	Move R3, R1; R3 = R1
+6	126000	Input; System Call
+7	8	System Call ID 8: Input Interrupt
+8	53310	R3++ = R0
+9	25060	Subtract Count, 1; Count = Count - 1
+10	0	Address of Count
+11	1	Immediate Operand 1
+12	85000	Count > 0, Branch to Input
+13	0	Address of Count
+14	6	Address of Input
+15	55060	Move Count, 5; Count = 5
+16	0	Address of Count
+17	5	Immediate Operand 5
+18	51311	Move R3, R1; R3 = R1
+19	51033	Output; Move R0, R3++; R0 = R3++	
+20	126000	System Call
+21	9	System Call ID 9: Output Interrupt
+22	25060	Subtract Count, 1; Count = Count -1
+23	0	Address of Count
+24	1	Immediate Operand 1
+25	85000	Count > 0, Branch to Output
+26	0	Address of Count
+27	19	Address of Output
+28	126000	System Call
+29	5	System Call ID 5: Mem Free
+30	0	Halt
+-1	1	End of Program, PC = 1

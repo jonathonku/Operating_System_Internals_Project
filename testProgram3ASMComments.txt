@@ -1,0 +1,19 @@
+Label	Mnemonic	Operands	Description
+main	Function			Start of main function
+Count	Long		5		Declare variable Count and initialize it 549
+Start	Move		R2, 9		R2 = 9. Used for MemAllocSystemCall
+	System Call	4		System Call using ID = 4, MemAllocSystemCall
+	Move		R3, R1		R3 = R1
+Input	System Call	8		System Call using ID = 8, Input Interrupt
+	Move		R3++, R0	R3 = R0, R3 Autoincrement mode
+	Subtract	Count, 1	Count = Count - 1
+	BrOnPlus	Count, Input	If Count > 0, jump to Input
+	Move		Count, 5	Count = 5
+	Move		R3, R1		R3 = R1
+	Move 		R0, R3++	R0 = R3, R3 Autoincrement mode
+Output	System Call	9		System Call using ID = 9, Output Interrupt
+	Subtract	Count, 1	Count = Count - 1
+	BrOnPlus	Count, Output	If Count > 0, jump to Output
+	System Call	5		System Call using ID = 5, MemFreeSystemCall
+	Halt				Halt the program
+	End		Start		Execution begins at the Move instruction
