@@ -89,7 +89,6 @@ public class HYPOMachine
 	final private static long OSMode = 1;						//Represents System in OS control
 	final private static long UserMode = 2;						//Represents System in User control
 	final private static long PCBSIZE = 20;						//Size of a PCB
-	final private static long PCBSTACKSIZE = 200;				//Size of stack allocated for PCB
 	final private static long STARTOFINPUTEVENT = 3;			
 	final private static long STARTOFOUTPUTEVENT = 4;
 
@@ -105,6 +104,7 @@ public class HYPOMachine
 	private static long UserFreeList = EOL;						//Pointer to the head of User Free Memory List
 	private static long OSFreeList = EOL;						//Pointer to the head of OS Free Memory List
 	private static long PID;									//Keeps track of next Process ID is available.
+	private static long PCBSTACKSIZE;							//Size of stack allocated for PCB
 	
 	/*****************************************************************************
 	 * Error Codes
@@ -409,6 +409,7 @@ public class HYPOMachine
 					int address = Integer.parseInt(line[0]);
 					long instruction = Long.parseLong(line[1]);
 					MAINMEMORY[address] = instruction;
+					PCBSTACKSIZE = address;
 				}
 				/* If the address is not valid. Display error message and return
 				 * error code.
@@ -491,7 +492,6 @@ public class HYPOMachine
 		long op2GPR;		//Store Operand 2 GPR of instruction in op2GPR
 		long timeLeft = TIMESLICE; //Timeslice is a constant of 200 clock ticks
 		
-		long systemCallID;	//Used for OpCode 12, System Call.
 		long result = 0;	//Stores result of arithmetic operations
 		long remainder = 0;	//Used to contain the remainder of integer divisions when separating instruction into 5 parts.
 		long status = 0;	//Contains status error codes, if errors occur, otherwise, remains 0. Returned to calling function.
@@ -923,7 +923,7 @@ public class HYPOMachine
 						}
 						else
 						{
-							if(SP-1 < 9900) 
+							if(SP-1 < 3000) 
 							{
 								System.out.println("Stack Underflow Error. Stack is empty. Nothing to pop");
 								status =  StackUnderFlowError;
